@@ -7,6 +7,8 @@ import addressRoutes from "./address.routes";
 import productRoutes from "./product.routes";
 import cartRoutes from "./cart.routes";
 import checkoutRoutes from "./checkout.routes";
+import paymentRoutes from "./payment.routes";
+import orderRoutes from "./order.routes";
 import authMiddleware from "../middleware/auth";
 
 const router: Router = express.Router();
@@ -19,5 +21,7 @@ router.use("/addresses", addressRoutes);
 router.use("/products", productRoutes);
 router.use("/cart", cartRoutes);
 router.use("/checkout", checkoutRoutes);
+router.use("/payments", paymentRoutes);
+router.use("/orders", orderRoutes);
 
 export default router;

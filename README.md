@@ -195,74 +195,63 @@ Backend/
 
 Aplikasi ini menggunakan **Layered Architecture** dengan pemisahan tanggung jawab yang jelas:
 
-```
-┌─────────────────────────────────────────┐
-│         HTTP Request (Client)           │
-└─────────────────┬───────────────────────┘
-                  │
-┌─────────────────▼───────────────────────┐
-│         Routes (Routing Layer)          │
-│   - Definisi endpoint                   │
-│   - Route parameter handling            │
-└─────────────────┬───────────────────────┘
-                  │
-┌─────────────────▼───────────────────────┐
-│      Middleware (Cross-cutting)         │
-│   - Authentication (JWT)                │
-│   - Authorization (Role check)          │
-│   - Validation                          │
-│   - File upload                         │
-└─────────────────┬───────────────────────┘
-                  │
-┌─────────────────▼───────────────────────┐
-│      Controllers (Presentation)         │
-│   - Handle HTTP request/response        │
-│   - Extract data from request           │
-│   - Call services                       │
-│   - Format response                     │
-└─────────────────┬───────────────────────┘
-                  │
-┌─────────────────▼───────────────────────┐
-│       Services (Business Logic)         │
-│   - Business rules & logic              │
-│   - Data transformation                 │
-│   - Call repositories                   │
-│   - Transaction management              │
-└─────────────────┬───────────────────────┘
-                  │
-┌─────────────────▼───────────────────────┐
-│    Repositories (Data Access)           │
-│   - Database queries                    │
-│   - CRUD operations                     │
-│   - Data mapping                        │
-└─────────────────┬───────────────────────┘
-                  │
-┌─────────────────▼───────────────────────┐
-│      Database (MongoDB + Prisma)        │
-└─────────────────────────────────────────┘
+```mermaid
+graph TB
+    Client[HTTP Request from Client]
+    Routes[Routes Layer<br/>- Definisi endpoint<br/>- Route parameter handling]
+    Middleware[Middleware Layer<br/>- Authentication JWT<br/>- Authorization Role check<br/>- Validation<br/>- File upload]
+    Controllers[Controllers Layer<br/>- Handle HTTP request/response<br/>- Extract data from request<br/>- Call services<br/>- Format response]
+    Services[Services Layer<br/>- Business rules & logic<br/>- Data transformation<br/>- Call repositories<br/>- Transaction management]
+    Repositories[Repositories Layer<br/>- Database queries<br/>- CRUD operations<br/>- Data mapping]
+    Database[(Database<br/>MongoDB + Prisma)]
+    
+    Client --> Routes
+    Routes --> Middleware
+    Middleware --> Controllers
+    Controllers --> Services
+    Services --> Repositories
+    Repositories --> Database
+    
+    style Client fill:#e1f5ff
+    style Routes fill:#fff3cd
+    style Middleware fill:#f8d7da
+    style Controllers fill:#d4edda
+    style Services fill:#d1ecf1
+    style Repositories fill:#e2d5f0
+    style Database fill:#f5c6cb
 ```
 
 ### Flow Contoh: Create Checkout
 
-```
-1. POST /checkout
-   ↓
-2. checkout.routes.ts → router ke CheckoutController
-   ↓
-3. authMiddleware → verifikasi JWT token
-   ↓
-4. CheckoutController.createCheckout()
-   ↓
-5. CheckoutService.createCheckout() → business logic:
-   - Validasi alamat
-   - Validasi cart
-   - Validasi stock
-   - Hitung total harga
-   - Hitung ongkir
-   ↓
-6. CheckoutRepository.createCheckout() → simpan ke database
-   ↓
-7. Response JSON ke client
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Router as checkout.routes.ts
+    participant Auth as authMiddleware
+    participant Controller as CheckoutController
+    participant Service as CheckoutService
+    participant Repo as CheckoutRepository
+    participant DB as MongoDB
+
+    Client->>Router: POST /checkout
+    Router->>Auth: Verify JWT token
+    Auth-->>Router: Token valid ✓
+    Router->>Controller: createCheckout()
+    Controller->>Service: createCheckout(userId, dto)
+    
+    Note over Service: Business Logic
+    Service->>Service: 1. Validasi alamat
+    Service->>Service: 2. Validasi cart
+    Service->>Service: 3. Validasi stock
+    Service->>Service: 4. Hitung total harga
+    Service->>Service: 5. Hitung ongkir
+    
+    Service->>Repo: createCheckout(data)
+    Repo->>DB: INSERT checkout & orders
+    DB-->>Repo: Data saved
+    Repo-->>Service: Checkout created
+    Service-->>Controller: Result
+    Controller-->>Client: JSON Response
 ```
 
 **Untuk dokumentasi lengkap, lihat:** [ARCHITECTURE.md](./ARCHITECTURE.md)
@@ -380,36 +369,133 @@ http://localhost:8686
 **🔔 payment_notifications**
 - Webhook notifications dari payment gateway
 
-### Database Schema Diagram
+### Database Schema Diagram (ERD)
 
-```
-┌─────────────┐
-│    User     │
-│  (users)    │
-└──────┬──────┘
-       │
-       │ 1:N
-       ├─────────────────┬──────────────┬─────────────┐
-       │                 │              │             │
-       ▼                 ▼              ▼             ▼
-┌────────────┐    ┌──────────┐   ┌─────────┐   ┌──────────┐
-│  Address   │    │ Product  │   │  Cart   │   │ Checkout │
-│(addresses) │    │(products)│   │ (carts) │   │(checkout)│
-└────────────┘    └─────┬────┘   └────┬────┘   └────┬─────┘
-                        │              │             │
-                        │              │ 1:N         │ 1:N
-                        │              ▼             ▼
-                        │         ┌──────────┐  ┌────────┐
-                        └────────►│CartItem  │  │ Order  │
-                          N:M     │(cart_    │  │(orders)│
-                                  │ items)   │  └───┬────┘
-                                  └──────────┘      │
-                                                    │ 1:N
-                                                    ▼
-                                              ┌──────────┐
-                                              │ Shipment │
-                                              │(shipment)│
-                                              └──────────┘
+```mermaid
+erDiagram
+    User ||--o{ UserAddress : has
+    User ||--o{ Product : creates
+    User ||--|| Cart : owns
+    User ||--o{ Checkout : makes
+    User ||--o{ Order : places
+    
+    Cart ||--o{ CartItem : contains
+    Product ||--o{ CartItem : "added to"
+    Product ||--o{ Order : "ordered in"
+    
+    Checkout ||--o{ Order : includes
+    Checkout ||--o{ Payment : has
+    
+    Order ||--o{ Shipment : "shipped via"
+    
+    Payment ||--o{ PaymentNotification : receives
+
+    User {
+        string id PK
+        string name
+        string email UK
+        string password_hash
+        string phone
+        enum role
+        datetime created_at
+        datetime updated_at
+    }
+    
+    UserAddress {
+        string id PK
+        string user_id FK
+        string label
+        string recipient_name
+        string phone
+        string address_line
+        string city
+        string province
+        string postal_code
+        boolean is_default
+        datetime created_at
+        datetime updated_at
+    }
+    
+    Product {
+        string id PK
+        string seller_id FK
+        string name
+        string description
+        int weight
+        float price
+        int stock
+        string image_url
+        datetime created_at
+        datetime updated_at
+    }
+    
+    Cart {
+        string id PK
+        string user_id FK
+        datetime created_at
+        datetime updated_at
+    }
+    
+    CartItem {
+        string id PK
+        string cart_id FK
+        string product_id FK
+        int quantity
+    }
+    
+    Checkout {
+        string id PK
+        string user_id FK
+        float total_price
+        float shipping_price
+        float grand_total
+        enum status
+        datetime created_at
+        datetime updated_at
+    }
+    
+    Order {
+        string id PK
+        string checkout_id FK
+        string user_id FK
+        string product_id FK
+        int quantity
+        float price_each
+        float total_price
+        enum status
+        datetime created_at
+        datetime updated_at
+    }
+    
+    Shipment {
+        string id PK
+        string order_id FK
+        string courier_name
+        string tracking_number
+        enum status
+        datetime created_at
+        datetime updated_at
+    }
+    
+    Payment {
+        string id PK
+        string checkout_id FK
+        string midtrans_order_id UK
+        string transaction_id UK
+        float gross_amount
+        string payment_type
+        string transaction_status
+        datetime transaction_time
+        datetime created_at
+        datetime updated_at
+    }
+    
+    PaymentNotification {
+        string id PK
+        string payment_id FK
+        string raw_body
+        datetime received_at
+    }
 ```
 
 **Full schema:** lihat `prisma/schema.prisma`
@@ -467,6 +553,96 @@ http://localhost:8686
 ## 🔐 Autentikasi & Otorisasi
 
 ### Authentication Flow
+
+```mermaid
+flowchart TD
+    Start([User Access App]) --> CheckAuth{Has Token?}
+    CheckAuth -->|No| ShowLogin[Show Login/Register Page]
+    CheckAuth -->|Yes| ValidateToken[Validate JWT Token]
+    
+    ShowLogin --> UserChoice{Choose Action}
+    UserChoice -->|Register| Register[POST /auth/register]
+    UserChoice -->|Login| Login[POST /auth/login]
+    
+    Register --> ValidateInput1{Input Valid?}
+    ValidateInput1 -->|No| ShowError1[Show Error]
+    ShowError1 --> ShowLogin
+    ValidateInput1 -->|Yes| HashPassword[Hash Password with bcrypt]
+    HashPassword --> SaveUser[Save to Database]
+    SaveUser --> GenerateToken1[Generate JWT Token]
+    GenerateToken1 --> ReturnToken1[Return Token + User Data]
+    
+    Login --> ValidateInput2{Credentials Valid?}
+    ValidateInput2 -->|No| ShowError2[Show Error: Invalid credentials]
+    ShowError2 --> ShowLogin
+    ValidateInput2 -->|Yes| ComparePassword[Compare Password with bcrypt]
+    ComparePassword --> PasswordMatch{Match?}
+    PasswordMatch -->|No| ShowError2
+    PasswordMatch -->|Yes| GenerateToken2[Generate JWT Token]
+    GenerateToken2 --> ReturnToken2[Return Token + User Data]
+    
+    ReturnToken1 --> StoreToken[Store Token in Client]
+    ReturnToken2 --> StoreToken
+    ValidateToken --> TokenValid{Token Valid?}
+    TokenValid -->|No| ShowLogin
+    TokenValid -->|Yes| StoreToken
+    
+    StoreToken --> AccessProtected[Access Protected Routes]
+    AccessProtected --> AddHeader[Add Header: Authorization Bearer Token]
+    AddHeader --> RequestAPI[Make API Request]
+    RequestAPI --> Middleware[authMiddleware validates token]
+    Middleware --> Success[✓ Access Granted]
+    
+    Success --> End([Continue Using App])
+    
+    style Start fill:#e1f5ff
+    style End fill:#d4edda
+    style ShowError1 fill:#f8d7da
+    style ShowError2 fill:#f8d7da
+    style Success fill:#d4edda
+```
+
+### Authorization Flow (Role-Based Access Control)
+
+```mermaid
+flowchart TD
+    Request[API Request with Token] --> AuthMiddleware[authMiddleware]
+    AuthMiddleware --> CheckToken{Token Exists?}
+    
+    CheckToken -->|No| Return401[Return 401 Unauthorized]
+    CheckToken -->|Yes| VerifyToken[Verify JWT Token]
+    
+    VerifyToken --> TokenValid{Token Valid?}
+    TokenValid -->|No| Return401
+    TokenValid -->|Yes| DecodeToken[Decode Token]
+    
+    DecodeToken --> ExtractUser[Extract user info:<br/>id, email, role]
+    ExtractUser --> AttachUser[Attach to req.user]
+    AttachUser --> CheckRole{Need Role Check?}
+    
+    CheckRole -->|No| AllowAccess[✓ Allow Access]
+    CheckRole -->|Yes| RoleMiddleware[roleCheck middleware]
+    
+    RoleMiddleware --> CompareRole{Role Matches?}
+    CompareRole -->|No| Return403[Return 403 Forbidden]
+    CompareRole -->|Yes| AllowAccess
+    
+    AllowAccess --> Controller[Execute Controller]
+    Controller --> CheckOwnership{Check Ownership?}
+    
+    CheckOwnership -->|No| ProcessRequest[Process Request]
+    CheckOwnership -->|Yes| VerifyOwner{Is Owner?}
+    
+    VerifyOwner -->|No| Return403
+    VerifyOwner -->|Yes| ProcessRequest
+    
+    ProcessRequest --> ReturnResponse[Return Response]
+    
+    style Return401 fill:#f8d7da
+    style Return403 fill:#f8d7da
+    style AllowAccess fill:#d4edda
+    style ReturnResponse fill:#d4edda
+```
 
 **1. Register User**
 ```bash
@@ -548,7 +724,65 @@ router.get('/cart', authMiddleware, CartController.getCart);
 ✅ Token validation di setiap protected route  
 ✅ Role-based access control (RBAC)  
 ✅ Owner verification (user hanya bisa akses data sendiri)  
-✅ Input validation di setiap endpoint  
+✅ Input validation di setiap endpoint
+
+### User Journey: Complete Shopping Flow
+
+```mermaid
+flowchart TD
+    Start([User Opens App]) --> Register[Register/Login]
+    Register --> Browse[Browse Products<br/>GET /products]
+    
+    Browse --> SelectProduct[Select Product<br/>GET /products/:id]
+    SelectProduct --> AddCart[Add to Cart<br/>POST /cart]
+    
+    AddCart --> ContinueShopping{Continue Shopping?}
+    ContinueShopping -->|Yes| Browse
+    ContinueShopping -->|No| ViewCart[View Cart<br/>GET /cart]
+    
+    ViewCart --> UpdateCart{Need Update?}
+    UpdateCart -->|Yes - Change Qty| UpdateQty[PUT /cart/:itemId]
+    UpdateCart -->|Yes - Remove Item| RemoveItem[DELETE /cart/:itemId]
+    UpdateQty --> ViewCart
+    RemoveItem --> ViewCart
+    UpdateCart -->|No| CheckAddress{Has Address?}
+    
+    CheckAddress -->|No| AddAddress[Create Address<br/>POST /addresses]
+    CheckAddress -->|Yes| SelectAddress[Select Address<br/>GET /addresses]
+    AddAddress --> SelectAddress
+    
+    SelectAddress --> CreateCheckout[Create Checkout<br/>POST /checkout]
+    CreateCheckout --> ValidateStock{Stock Available?}
+    
+    ValidateStock -->|No| ShowError[Show Error:<br/>Insufficient Stock]
+    ShowError --> ViewCart
+    
+    ValidateStock -->|Yes| Calculate[Calculate:<br/>- Total Price<br/>- Shipping Cost<br/>- Grand Total]
+    Calculate --> CreateOrder[Create Order Records]
+    CreateOrder --> ReduceStock[Reduce Product Stock]
+    ReduceStock --> ClearCart[Clear Cart Items]
+    
+    ClearCart --> ShowSummary[Show Order Summary<br/>GET /checkout/:id]
+    ShowSummary --> ProcessPayment[Process Payment<br/>Future: Midtrans]
+    
+    ProcessPayment --> PaymentSuccess{Payment Success?}
+    PaymentSuccess -->|No| PaymentFailed[Order Status: Cancelled]
+    PaymentSuccess -->|Yes| UpdateStatus[Order Status: Paid]
+    
+    UpdateStatus --> PrepareShipment[Prepare Shipment<br/>Future Feature]
+    PrepareShipment --> ShipOrder[Ship Order<br/>Future Feature]
+    ShipOrder --> TrackOrder[Track Order<br/>Future Feature]
+    TrackOrder --> OrderComplete[Order Delivered]
+    
+    OrderComplete --> End([End])
+    PaymentFailed --> End
+    
+    style Start fill:#e1f5ff
+    style End fill:#d4edda
+    style ShowError fill:#f8d7da
+    style PaymentFailed fill:#f8d7da
+    style OrderComplete fill:#d4edda
+```  
 
 ---
 
