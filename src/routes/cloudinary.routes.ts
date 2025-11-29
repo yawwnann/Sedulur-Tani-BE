@@ -1,5 +1,5 @@
 import express, { Router } from 'express';
-import CloudinaryTestController from '../controllers/CloudinaryTestController';
+import CloudinaryTestController from '../controllers/cloudinary.controller';
 import multer from 'multer';
 
 const router: Router = express.Router();

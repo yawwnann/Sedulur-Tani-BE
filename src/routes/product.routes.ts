@@ -1,5 +1,5 @@
 import express, { Router } from "express";
-import ProductController from "../controllers/ProductController";
+import ProductController from "../controllers/product.controller";
 import authMiddleware from "../middleware/auth";
 import { requireSeller } from "../middleware/roleCheck";
 

@@ -124,7 +124,7 @@ class ProductController {
       if (!id) {
         return res.status(400).json({
           success: false,
-          message: "Product ID is required"
+          message: "Product I"
         });
       }
 

@@ -1,6 +1,6 @@
 import express, { Router } from "express";
-import HomeController from "../controllers/HomeController";
-import AuthController from "../controllers/AuthController";
+import HomeController from "../controllers/home.controller";
+import AuthController from "../controllers/auth.controller";
 import authRoutes from "./auth.routes";
 import userRoutes from "./user.routes";
 import addressRoutes from "./address.routes";
@@ -10,6 +10,7 @@ import checkoutRoutes from "./checkout.routes";
 import paymentRoutes from "./payment.routes";
 import orderRoutes from "./order.routes";
 import cloudinaryRoutes from "./cloudinary.routes";
+import shippingRoutes from "./shipping.routes";
 import authMiddleware from "../middleware/auth";
 
 const router: Router = express.Router();
@@ -25,5 +26,6 @@ router.use("/checkout", checkoutRoutes);
 router.use("/payments", paymentRoutes);
 router.use("/orders", orderRoutes);
 router.use("/cloudinary", cloudinaryRoutes);
+router.use("/shipping", shippingRoutes);
 
 export default router;

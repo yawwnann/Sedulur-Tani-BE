@@ -1,5 +1,5 @@
 import express, { Router } from "express";
-import CheckoutController from "../controllers/CheckoutController";
+import CheckoutController from "../controllers/checkout.controller";
 import authMiddleware from "../middleware/auth";
 
 const router: Router = express.Router();
