@@ -3,26 +3,37 @@ import { CreateProductDTO, UpdateProductDTO } from "../types/product.types";
 
 class ProductService {
   async createProduct(userId: string, data: CreateProductDTO) {
+    const productData: any = {
+      seller_id: userId,
+      name: data.name,
+      description: data.description,
+      weight: data.weight,
+      price: data.price,
+      stock: data.stock,
+    };
+
+    if (data.category) productData.category = data.category;
+    if (data.image_url) productData.image_url = data.image_url;
+
     return await prisma.product.create({
-      data: {
-        seller_id: userId,
-        name: data.name,
-        description: data.description,
-        weight: data.weight,
-        price: data.price,
-        stock: data.stock,
-        image_url: data.image_url
-      }
+      data: productData
     });
   }
 
-  async getAllProducts(filters: {
-    seller_id?: string;
-    search?: string;
-    min_price?: number;
-    max_price?: number;
-    in_stock?: boolean;
-  }) {
+  async getAllProducts(
+    filters: {
+      seller_id?: string;
+      search?: string;
+      category?: string;
+      min_price?: number;
+      max_price?: number;
+      in_stock?: boolean;
+    },
+    pagination?: {
+      page: number;
+      limit: number;
+    }
+  ) {
     const where: any = {};
 
     if (filters.seller_id) {
@@ -36,6 +47,10 @@ class ProductService {
       ];
     }
 
+    if (filters.category) {
+      where.category = { contains: filters.category, mode: 'insensitive' };
+    }
+
     if (filters.min_price || filters.max_price) {
       where.price = {};
       if (filters.min_price) where.price.gte = filters.min_price;
@@ -46,7 +61,17 @@ class ProductService {
       where.stock = { gt: 0 };
     }
 
-    return await prisma.product.findMany({
+    // Get total count for pagination
+    const total = await prisma.product.count({ where });
+
+    // Calculate pagination
+    const page = pagination?.page || 1;
+    const limit = pagination?.limit || 12;
+    const skip = (page - 1) * limit;
+    const totalPages = Math.ceil(total / limit);
+
+    // Get products with pagination
+    const products = await prisma.product.findMany({
       where,
       include: {
         seller: {
@@ -59,8 +84,20 @@ class ProductService {
       },
       orderBy: {
         created_at: 'desc'
-      }
+      },
+      skip,
+      take: limit
     });
+
+    return {
+      products,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages
+      }
+    };
   }
 
   async getProductById(productId: string) {

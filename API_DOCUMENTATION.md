@@ -363,11 +363,11 @@ Authorization: Bearer <token>
 {
   "name": "Beras Premium",
   "description": "Beras kualitas terbaik",
+  "category": "Beras",
+  "weight": 1000,
   "price": 15000,
   "stock": 100,
-  "weight": 1,
-  "category": "Beras",
-  "imageUrl": "https://example.com/image.jpg"
+  "image_url": "https://example.com/image.jpg"
 }
 ```
 
@@ -393,31 +393,46 @@ Authorization: Bearer <token>
 Get all available products (Public).
 
 **Query Parameters:**
+- `seller_id` (optional): Filter by seller ID
+- `search` (optional): Search by name or description
 - `category` (optional): Filter by category
-- `search` (optional): Search by name
-- `minPrice` (optional): Minimum price
-- `maxPrice` (optional): Maximum price
+- `min_price` (optional): Minimum price
+- `max_price` (optional): Maximum price
+- `in_stock` (optional): Filter only products with stock > 0 (true/false)
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Items per page (default: 12)
 
 **Response:**
 ```json
 {
   "success": true,
-  "data": [
-    {
-      "id": "product-id",
-      "name": "Beras Premium",
-      "description": "Beras kualitas terbaik",
-      "price": 15000,
-      "stock": 100,
-      "weight": 1,
-      "category": "Beras",
-      "imageUrl": "https://example.com/image.jpg",
-      "seller": {
-        "id": "seller-id",
-        "name": "Toko Tani"
+  "message": "Products retrieved successfully",
+  "data": {
+    "products": [
+      {
+        "id": "product-id",
+        "name": "Beras Premium",
+        "description": "Beras kualitas terbaik",
+        "price": 15000,
+        "stock": 100,
+        "weight": 1000,
+        "image_url": "https://example.com/image.jpg",
+        "seller": {
+          "id": "seller-id",
+          "name": "Toko Tani",
+          "email": "seller@example.com"
+        },
+        "created_at": "2024-01-01T00:00:00.000Z",
+        "updated_at": "2024-01-01T00:00:00.000Z"
       }
+    ],
+    "pagination": {
+      "total": 50,
+      "page": 1,
+      "limit": 12,
+      "totalPages": 5
     }
-  ]
+  }
 }
 ```
 

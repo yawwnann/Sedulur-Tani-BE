@@ -1,6 +1,7 @@
 export interface CreateProductDTO {
   name: string;
   description: string;
+  category?: string;
   weight: number;
   price: number;
   stock: number;
@@ -10,6 +11,7 @@ export interface CreateProductDTO {
 export interface UpdateProductDTO {
   name?: string;
   description?: string;
+  category?: string;
   weight?: number;
   price?: number;
   stock?: number;

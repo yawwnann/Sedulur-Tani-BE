@@ -33,20 +33,26 @@ class ProductController {
 
   async getAll(req: Request, res: Response): Promise<Response> {
     try {
-      const { seller_id, search, min_price, max_price, in_stock } = req.query;
+      const { seller_id, search, category, min_price, max_price, in_stock, page, limit } = req.query;
 
       const filters = {
         seller_id: seller_id as string | undefined,
         search: search as string | undefined,
+        category: category as string | undefined,
         min_price: min_price ? parseFloat(min_price as string) : undefined,
         max_price: max_price ? parseFloat(max_price as string) : undefined,
         in_stock: in_stock === 'true'
       };
 
-      const products = await ProductService.getAllProducts(filters);
+      const pagination = {
+        page: page ? parseInt(page as string) : 1,
+        limit: limit ? parseInt(limit as string) : 12
+      };
+
+      const result = await ProductService.getAllProducts(filters, pagination);
 
       return res.status(200).json(
-        successResponse("Products retrieved successfully", { products })
+        successResponse("Products retrieved successfully", result)
       );
     } catch (error) {
       return handleError(res, error);
