@@ -1,17 +1,25 @@
 import bodyParser from "body-parser";
 import express, { Application } from "express";
 import cors from "cors";
+import dotenv from "dotenv";
 import router from "./src/routes/routes";
+
+dotenv.config();
 
 const app: Application = express();
 
 // CORS Configuration
 const corsOptions = {
-  origin: ['http://localhost:3000', 'http://localhost:3001'],
+  origin: true, // Allow all origins dynamically (good for development)
   credentials: true,
   optionsSuccessStatus: 200,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "Accept",
+  ],
 };
 
 app.use(cors(corsOptions));
@@ -23,7 +31,7 @@ app.use("/api/v1", router);
 const PORT = 8686;
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📱 Frontend: http://localhost:3000`);
-  console.log(`✅ CORS enabled for frontend`);
+  console.log(` Server running on http://localhost:${PORT}`);
+  console.log(` Frontend: http://localhost:3000`);
+  console.log(` CORS enabled for frontend`);
 });

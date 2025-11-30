@@ -1,5 +1,6 @@
 import prisma from "../database/prisma";
 import { CreateCheckoutDTO } from "../types/checkout.types";
+import { calculateShippingCost } from "./shipping.service";
 
 class CheckoutService {
   async validateAddress(addressId: string, userId: string) {
@@ -47,7 +48,7 @@ class CheckoutService {
     }
   }
 
-  calculateTotals(cartItems: any[]) {
+  calculateTotals(cartItems: any[], provinceId: string) {
     let totalPrice = 0;
     let totalWeight = 0;
 
@@ -56,18 +57,11 @@ class CheckoutService {
       totalWeight += item.product.weight * item.quantity;
     }
 
-    const shippingPrice = this.calculateShippingPrice(totalWeight);
+    const weightInKg = totalWeight / 1000;
+    const shippingPrice = calculateShippingCost(provinceId, weightInKg);
     const grandTotal = totalPrice + shippingPrice;
 
     return { totalPrice, shippingPrice, grandTotal, totalWeight };
-  }
-
-  private calculateShippingPrice(totalWeight: number): number {
-    const baseRate = 10000;
-    const weightInKg = totalWeight / 1000;
-    const additionalRate = Math.ceil(weightInKg) * 500;
-    
-    return baseRate + additionalRate;
   }
 
   async createCheckoutTransaction(

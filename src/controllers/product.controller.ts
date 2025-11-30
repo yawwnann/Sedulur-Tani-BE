@@ -4,6 +4,7 @@ import ProductService from "../services/Product.service";
 import ProductValidator from "../validators/ProductValidator";
 import { successResponse } from "../utils/responseFormatter";
 import { handleError } from "../utils/errorHandler";
+import { uploadImageBuffer } from "../utils/imageUpload";
 
 class ProductController {
   async create(req: Request, res: Response): Promise<Response> {
@@ -17,7 +18,35 @@ class ProductController {
         });
       }
 
-      const productData: CreateProductDTO = req.body;
+      console.log("Create Product Request:");
+      console.log("Body:", req.body);
+      console.log("File:", req.file);
+
+      // Parse numbers from string inputs (multipart/form-data sends strings)
+      const rawBody = req.body;
+      const productData: CreateProductDTO = {
+        ...rawBody,
+        price: rawBody.price ? parseFloat(rawBody.price) : undefined,
+        weight: rawBody.weight ? parseFloat(rawBody.weight) : undefined,
+        stock: rawBody.stock ? parseInt(rawBody.stock) : undefined,
+      };
+      
+      // Remove 'image' field if it exists in rawBody as it's not in the schema
+      delete (productData as any).image;
+
+      // Handle image upload if exists
+      if (req.file) {
+        try {
+          const uploadResult = await uploadImageBuffer(req.file.buffer, 'products');
+          productData.image_url = uploadResult.secure_url;
+        } catch (error: any) {
+          console.error("Cloudinary upload error:", error);
+          return res.status(400).json({
+            success: false,
+            message: `Failed to upload image: ${error.message || "Unknown error"}`
+          });
+        }
+      }
 
       ProductValidator.validateCreateProduct(productData);
 
@@ -30,6 +59,7 @@ class ProductController {
       return handleError(res, error);
     }
   }
+
 
   async getAll(req: Request, res: Response): Promise<Response> {
     try {
@@ -92,6 +122,11 @@ class ProductController {
         });
       }
 
+      console.log("Update Product Request:");
+      console.log("ID:", id);
+      console.log("Body:", req.body);
+      console.log("File:", req.file);
+
       if (!id) {
         return res.status(400).json({
           success: false,
@@ -99,7 +134,31 @@ class ProductController {
         });
       }
 
-      const updateData: UpdateProductDTO = req.body;
+      // Parse numbers from string inputs
+      const rawBody = req.body;
+      const updateData: UpdateProductDTO = {
+        ...rawBody,
+        price: rawBody.price ? parseFloat(rawBody.price) : undefined,
+        weight: rawBody.weight ? parseFloat(rawBody.weight) : undefined,
+        stock: rawBody.stock ? parseInt(rawBody.stock) : undefined,
+      };
+
+      // Remove 'image' field if it exists in rawBody as it's not in the schema
+      delete (updateData as any).image;
+
+      // Handle image upload if exists
+      if (req.file) {
+        try {
+          const uploadResult = await uploadImageBuffer(req.file.buffer, 'products');
+          updateData.image_url = uploadResult.secure_url;
+        } catch (error: any) {
+          console.error("Cloudinary upload error:", error);
+          return res.status(400).json({
+            success: false,
+            message: `Failed to upload image: ${error.message || "Unknown error"}`
+          });
+        }
+      }
 
       ProductValidator.validateUpdateProduct(updateData);
 

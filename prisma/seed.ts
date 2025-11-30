@@ -16,6 +16,7 @@ async function main() {
   await prisma.cartItem.deleteMany({});
   await prisma.cart.deleteMany({});
   await prisma.product.deleteMany({});
+  await prisma.category.deleteMany({});
   await prisma.userAddress.deleteMany({});
   await prisma.user.deleteMany({});
   console.log("✅ Old data cleared");
@@ -55,6 +56,45 @@ async function main() {
   });
 
   console.log("✅ Sellers created");
+
+  // Create Categories
+  console.log("📂 Creating categories...");
+  const categories = [
+    {
+      name: "Pupuk Urea",
+      description: "Pupuk dengan kandungan nitrogen tinggi",
+    },
+    {
+      name: "Pupuk NPK",
+      description: "Pupuk majemuk mengandung Nitrogen, Phosphat, dan Kalium",
+    },
+    { name: "Pupuk Kandang", description: "Pupuk organik dari kotoran hewan" },
+    {
+      name: "Pupuk Kompos",
+      description: "Pupuk dari hasil penguraian bahan organik",
+    },
+    { name: "Pupuk TSP", description: "Pupuk dengan kandungan fosfat tinggi" },
+    { name: "Pupuk KCL", description: "Pupuk dengan kandungan kalium tinggi" },
+    {
+      name: "Pupuk Organik Cair",
+      description: "Pupuk organik dalam bentuk cair",
+    },
+    {
+      name: "Pupuk Hayati",
+      description: "Pupuk mengandung mikroorganisme hidup",
+    },
+  ];
+
+  for (const cat of categories) {
+    await prisma.category.create({
+      data: {
+        name: cat.name,
+        slug: cat.name.toLowerCase().replace(/ /g, "-"),
+        description: cat.description,
+      },
+    });
+  }
+  console.log(`✅ ${categories.length} categories created`);
 
   // Create products with categories
   console.log("🛒 Creating products...");
@@ -357,9 +397,152 @@ async function main() {
 
   console.log("✅ Buyer and address created");
 
+  // Create Orders Seeder
+  console.log("📦 Creating Orders...");
+
+  const allProducts = await prisma.product.findMany();
+  const buyerUser = await prisma.user.findFirst({
+    where: { email: "buyer@example.com" },
+  });
+
+  if (!buyerUser || allProducts.length === 0) {
+    console.log("⚠️ Skipping order seeding: No buyer or products found.");
+  } else {
+    const checkoutStatuses: any[] = ["pending", "paid", "expired"];
+    const orderStatuses: any[] = [
+      "pending",
+      "processed",
+      "shipped",
+      "completed",
+      "cancelled",
+    ];
+    const shipmentStatuses: any[] = ["packing", "shipping", "delivered"];
+
+    // Create 15 random orders
+    for (let i = 0; i < 15; i++) {
+      // 1. Select 1-3 random products
+      const numItems = Math.floor(Math.random() * 3) + 1;
+      const selectedProducts = [];
+      for (let j = 0; j < numItems; j++) {
+        const randomProduct =
+          allProducts[Math.floor(Math.random() * allProducts.length)];
+        selectedProducts.push(randomProduct);
+      }
+
+      // 2. Calculate totals
+      let totalPrice = 0;
+      const orderItems = selectedProducts.map((prod) => {
+        const qty = Math.floor(Math.random() * 5) + 1;
+        const itemTotal = prod.price * qty;
+        totalPrice += itemTotal;
+        return { product: prod, quantity: qty, total: itemTotal };
+      });
+
+      const shippingCost = Math.floor(Math.random() * 50000) + 10000;
+      const grandTotal = totalPrice + shippingCost;
+
+      // 3. Determine random status
+      const checkoutStatus =
+        checkoutStatuses[Math.floor(Math.random() * checkoutStatuses.length)];
+
+      // Logic for consistent statuses (optional but good for realism)
+      // If checkout is pending, order is pending.
+      // If checkout is paid, order can be processed, shipped, completed.
+      // If checkout is expired, order is cancelled.
+      // However, user said "random aja gapapa", so we will just random them but keep some sanity if possible,
+      // or purely random as requested. Let's do purely random but valid constraints if any.
+      // Actually, Order status depends on Checkout status usually.
+      // Let's mix them a bit.
+
+      let currentOrderStatus =
+        orderStatuses[Math.floor(Math.random() * orderStatuses.length)];
+      let currentPaymentStatus = "pending";
+      let currentShipmentStatus =
+        shipmentStatuses[Math.floor(Math.random() * shipmentStatuses.length)];
+
+      if (checkoutStatus === "pending") {
+        currentOrderStatus = "pending";
+        currentPaymentStatus = "pending";
+      } else if (checkoutStatus === "expired") {
+        currentOrderStatus = "cancelled";
+        currentPaymentStatus = "expire";
+      } else if (checkoutStatus === "paid") {
+        currentPaymentStatus = "settlement";
+        // Order status can be anything except pending usually
+        if (currentOrderStatus === "pending") currentOrderStatus = "processed";
+      }
+
+      // 4. Create Checkout
+      const checkout = await prisma.checkout.create({
+        data: {
+          user_id: buyerUser.id,
+          total_price: totalPrice,
+          shipping_price: shippingCost,
+          grand_total: grandTotal,
+          status: checkoutStatus,
+          created_at: new Date(
+            Date.now() - Math.floor(Math.random() * 1000000000)
+          ), // Random date in past
+        },
+      });
+
+      // 5. Create Payment (if not pending/expired, or just create one for record)
+      await prisma.payment.create({
+        data: {
+          checkout_id: checkout.id,
+          midtrans_order_id: `ORDER-${checkout.id}-${Math.floor(
+            Math.random() * 1000
+          )}`,
+          transaction_id: `TRX-${checkout.id}-${Math.floor(
+            Math.random() * 1000
+          )}`,
+          gross_amount: grandTotal,
+          transaction_status: currentPaymentStatus,
+          payment_type: "bank_transfer",
+          transaction_time: new Date(),
+        },
+      });
+
+      // 6. Create Orders
+      for (const item of orderItems) {
+        const order = await prisma.order.create({
+          data: {
+            checkout_id: checkout.id,
+            user_id: buyerUser.id,
+            product_id: item.product.id,
+            quantity: item.quantity,
+            price_each: item.product.price,
+            total_price: item.total,
+            status: currentOrderStatus,
+            created_at: checkout.created_at, // Same as checkout
+          },
+        });
+
+        // 7. Create Shipment (if order is not pending/cancelled)
+        if (
+          currentOrderStatus !== "pending" &&
+          currentOrderStatus !== "cancelled"
+        ) {
+          await prisma.shipment.create({
+            data: {
+              order_id: order.id,
+              courier_name: ["JNE", "J&T", "SiCepat"][
+                Math.floor(Math.random() * 3)
+              ],
+              tracking_number: `TRK${Math.floor(Math.random() * 10000000)}`,
+              status: currentShipmentStatus,
+            },
+          });
+        }
+      }
+    }
+    console.log("✅ 15 Orders created with random statuses");
+  }
+
   console.log("\n🎉 Seeding finished successfully!");
   console.log("\n📊 Summary:");
   console.log(`   - Users: ${await prisma.user.count()}`);
+  console.log(`   - Categories: ${await prisma.category.count()}`);
   console.log(`   - Products: ${await prisma.product.count()}`);
   console.log(`   - Addresses: ${await prisma.userAddress.count()}`);
   console.log("\n🔑 Test Credentials:");

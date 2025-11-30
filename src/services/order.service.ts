@@ -6,17 +6,24 @@ class OrderService {
   async getAllOrders(userId: string, role: UserRole): Promise<OrderResponse[]> {
     const whereClause: any = {};
 
+    // Buyer hanya bisa lihat pesanan mereka sendiri
     if (role === "buyer") {
       whereClause.user_id = userId;
-    } else if (role === "seller") {
-      whereClause.product = {
-        seller_id: userId
-      };
     }
+    // Seller bisa lihat SEMUA pesanan dari semua buyer
+    // (tidak ada filter untuk seller)
 
     const orders = await prisma.order.findMany({
       where: whereClause,
       include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true
+          }
+        },
         product: {
           select: {
             id: true,
@@ -24,13 +31,22 @@ class OrderService {
             description: true,
             price: true,
             stock: true,
-            image_url: true
+            image_url: true,
+            seller: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            }
           }
         },
         checkout: {
           select: {
             id: true,
-            status: true
+            status: true,
+            grand_total: true,
+            shipping_price: true
           }
         }
       },
@@ -46,6 +62,14 @@ class OrderService {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
       include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true
+          }
+        },
         product: {
           select: {
             id: true,
@@ -54,13 +78,22 @@ class OrderService {
             price: true,
             stock: true,
             image_url: true,
-            seller_id: true
+            seller_id: true,
+            seller: {
+              select: {
+                id: true,
+                name: true,
+                email: true
+              }
+            }
           }
         },
         checkout: {
           select: {
             id: true,
-            status: true
+            status: true,
+            grand_total: true,
+            shipping_price: true
           }
         }
       }
@@ -70,13 +103,13 @@ class OrderService {
       throw new Error("Order not found");
     }
 
+    // Buyer hanya bisa akses pesanan mereka sendiri
     if (role === "buyer" && order.user_id !== userId) {
       throw new Error("Forbidden: You can only access your own orders");
     }
 
-    if (role === "seller" && order.product.seller_id !== userId) {
-      throw new Error("Forbidden: You can only access orders for your products");
-    }
+    // Seller bisa akses semua pesanan
+    // (tidak ada pembatasan untuk seller)
 
     return order;
   }

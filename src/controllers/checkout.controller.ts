@@ -25,7 +25,7 @@ class CheckoutController {
       const cart = await CheckoutService.getCartWithItems(userId);
       await CheckoutService.validateStock(cart);
 
-      const totals = CheckoutService.calculateTotals(cart.items);
+      const totals = CheckoutService.calculateTotals(cart.items, address.province);
       const checkout = await CheckoutService.createCheckoutTransaction(userId, cart, totals);
       const completeCheckout = await CheckoutService.getCheckoutWithOrders(checkout.id);
 

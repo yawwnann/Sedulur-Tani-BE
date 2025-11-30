@@ -123,7 +123,22 @@ export const getDistricts = (regencyId: string) => {
   return districtsCache.filter(d => d.regencyId === regencyId);
 };
 
-export const calculateShippingCost = (provinceId: string, weight: number) => {
+export const getProvinceIdByName = (name: string): string | undefined => {
+  const province = provincesCache.find(p => p.name.toLowerCase() === name.toLowerCase());
+  return province?.id;
+};
+
+export const calculateShippingCost = (provinceIdOrName: string, weight: number) => {
+  let provinceId = provinceIdOrName;
+
+  // Check if input is likely a name (not numeric string) or not in cost map
+  if (!PROVINCE_BASE_COSTS[provinceId]) {
+    const foundId = getProvinceIdByName(provinceIdOrName);
+    if (foundId) {
+      provinceId = foundId;
+    }
+  }
+
   const baseCost = PROVINCE_BASE_COSTS[provinceId];
   
   if (!baseCost) {

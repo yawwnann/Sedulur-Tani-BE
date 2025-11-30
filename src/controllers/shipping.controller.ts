@@ -32,13 +32,15 @@ export const getDistricts = (req: Request, res: Response) => {
 
 export const calculateCost = (req: Request, res: Response) => {
   try {
-    const { provinceId, weight } = req.body;
+    const { provinceId, provinceName, weight } = req.body;
     
-    if (!provinceId || weight === undefined) {
-      return res.status(400).json({ success: false, message: 'Province ID and weight are required' });
+    const provinceIdentifier = provinceId || provinceName;
+
+    if (!provinceIdentifier || weight === undefined) {
+      return res.status(400).json({ success: false, message: 'Province (ID or Name) and weight are required' });
     }
 
-    const cost = shippingService.calculateShippingCost(provinceId, Number(weight));
+    const cost = shippingService.calculateShippingCost(provinceIdentifier, Number(weight));
     res.status(200).json({ success: true, data: { cost, courier: "JNE (Estimasi)", etd: "2-3 Hari" } });
   } catch (error: any) {
     res.status(400).json({ success: false, message: error.message });
