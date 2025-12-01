@@ -114,6 +114,7 @@ class ProductController {
     try {
       const { id } = req.params;
       const userId = (req as any).user?.userId;
+      const userRole = (req as any).user?.role;
 
       if (!userId) {
         return res.status(401).json({
@@ -162,7 +163,7 @@ class ProductController {
 
       ProductValidator.validateUpdateProduct(updateData);
 
-      await ProductService.validateProductOwnership(id, userId);
+      await ProductService.validateProductOwnership(id, userId, userRole);
 
       const updatedProduct = await ProductService.updateProduct(id, updateData);
 
@@ -178,6 +179,7 @@ class ProductController {
     try {
       const { id } = req.params;
       const userId = (req as any).user?.userId;
+      const userRole = (req as any).user?.role;
 
       if (!userId) {
         return res.status(401).json({
@@ -189,11 +191,11 @@ class ProductController {
       if (!id) {
         return res.status(400).json({
           success: false,
-          message: "Product I"
+          message: "Product ID is required"
         });
       }
 
-      await ProductService.validateProductOwnership(id, userId);
+      await ProductService.validateProductOwnership(id, userId, userRole);
       await ProductService.deleteProduct(id);
 
       return res.status(200).json(

@@ -192,6 +192,7 @@ class OrderService {
     orderId: string,
     newStatus: OrderStatus,
     userId: string,
+    userRole: UserRole,
     courierName?: string,
     trackingNumber?: string
   ): Promise<OrderResponse> {
@@ -207,8 +208,10 @@ class OrderService {
       throw new Error("Order not found");
     }
 
-    if (order.product.seller_id !== userId) {
-      throw new Error("Forbidden: You can only update orders for your own products");
+    // Seller (yang juga admin) bisa update semua order
+    // Buyer tidak bisa update order status
+    if (userRole !== "seller") {
+      throw new Error("Forbidden: Only sellers can update order status");
     }
 
     this.validateStatusTransition(order.status, newStatus);

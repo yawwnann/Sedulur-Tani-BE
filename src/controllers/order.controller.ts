@@ -108,6 +108,7 @@ class OrderController {
         id,
         status as OrderStatus,
         user.userId,
+        user.role,
         courier_name,
         tracking_number
       );

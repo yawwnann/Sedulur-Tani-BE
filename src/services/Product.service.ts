@@ -121,13 +121,18 @@ class ProductService {
     return product;
   }
 
-  async validateProductOwnership(productId: string, userId: string) {
+  async validateProductOwnership(productId: string, userId: string, userRole?: string) {
     const product = await prisma.product.findUnique({
       where: { id: productId }
     });
 
     if (!product) {
       throw new Error("Product not found");
+    }
+
+    // Seller (yang juga admin) bisa mengelola semua produk
+    if (userRole === "seller") {
+      return product;
     }
 
     if (product.seller_id !== userId) {
