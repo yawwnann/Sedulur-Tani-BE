@@ -134,6 +134,152 @@ class DashboardService {
     // Product categories distribution
     const categoryDistribution = await this.getCategoryDistribution();
 
+    // --- New Real Data Implementation ---
+
+    // 1. Quick Stats
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const todayOrders = await prisma.order.findMany({
+      where: { created_at: { gte: today } }
+    });
+    const todaySales = todayOrders.reduce((sum, o) => sum + o.total_price, 0);
+    
+    const newUsersToday = await prisma.user.count({
+      where: { created_at: { gte: today } }
+    });
+
+    const pendingOrdersCount = await prisma.order.count({
+      where: { status: 'pending' }
+    });
+
+    const lowStockCount = await prisma.product.count({
+      where: { stock: { lt: 10 } }
+    });
+
+    const quickStats = {
+      todaySales,
+      newUsers: newUsersToday,
+      pendingOrders: pendingOrdersCount,
+      lowStock: lowStockCount
+    };
+
+    // 2. Notifications
+    const notifications: any[] = [];
+    
+    // New Orders Notification
+    const recentPendingOrders = await prisma.order.findMany({
+      where: { status: 'pending' },
+      take: 5,
+      orderBy: { created_at: 'desc' },
+      include: { user: true }
+    });
+
+    recentPendingOrders.forEach(order => {
+      notifications.push({
+        id: `ord-${order.id}`,
+        type: 'order',
+        message: `Pesanan baru #${order.id.substring(0,8)} dari ${order.user.name}`,
+        time: order.created_at,
+        status: 'new',
+        priority: 'high'
+      });
+    });
+
+    // Low Stock Notification
+    const lowStockProducts = await prisma.product.findMany({
+      where: { stock: { lt: 10 } },
+      take: 5,
+      orderBy: { stock: 'asc' }
+    });
+
+    lowStockProducts.forEach(product => {
+      notifications.push({
+        id: `prod-${product.id}`,
+        type: 'product',
+        message: `Stok ${product.name} menipis (${product.stock} left)`,
+        time: new Date(), // Current time for alert
+        status: 'warning',
+        priority: 'medium'
+      });
+    });
+
+    // New Users Notification
+    const recentNewUsers = await prisma.user.findMany({
+      take: 3,
+      orderBy: { created_at: 'desc' }
+    });
+
+    recentNewUsers.forEach(user => {
+      notifications.push({
+        id: `user-${user.id}`,
+        type: 'user',
+        message: `Pengguna baru ${user.name} bergabung`,
+        time: user.created_at,
+        status: 'info',
+        priority: 'low'
+      });
+    });
+
+    const sortedNotifications = notifications
+        .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+        .slice(0, 10);
+
+    // 3. Recent Activities
+    const activities: any[] = [];
+
+    // Recent Orders Activity
+    const recentActivityOrders = await prisma.order.findMany({
+      take: 5,
+      orderBy: { created_at: 'desc' },
+      include: { user: true, product: true }
+    });
+
+    recentActivityOrders.forEach(order => {
+      activities.push({
+        id: `act-ord-${order.id}`,
+        user: order.user.name,
+        action: 'Membeli',
+        target: order.product.name,
+        time: order.created_at,
+        type: 'purchase'
+      });
+    });
+
+    // Recent Products Activity
+    const recentActivityProducts = await prisma.product.findMany({
+      take: 5,
+      orderBy: { created_at: 'desc' },
+      include: { seller: true }
+    });
+
+    recentActivityProducts.forEach(product => {
+      activities.push({
+        id: `act-prod-${product.id}`,
+        user: product.seller.name,
+        action: 'Menambah produk baru',
+        target: product.name,
+        time: product.created_at,
+        type: 'create'
+      });
+    });
+
+    // Recent User Registrations
+    recentNewUsers.forEach(user => {
+       activities.push({
+        id: `act-user-${user.id}`,
+        user: user.name,
+        action: 'Mendaftar sebagai',
+        target: user.role === 'seller' ? 'Penjual' : 'Pembeli',
+        time: user.created_at,
+        type: 'register'
+      });
+    });
+
+    const recentActivities = activities
+      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+      .slice(0, 10);
+
     return {
       summary: {
         totalRevenue,
@@ -144,6 +290,9 @@ class DashboardService {
         totalSellers,
         averageOrderValue: allOrders.length > 0 ? totalRevenue / allOrders.length : 0
       },
+      quickStats,
+      notifications: sortedNotifications,
+      recentActivities,
       ordersByStatus,
       dailySales,
       topCategories,

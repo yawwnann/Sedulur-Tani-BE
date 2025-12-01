@@ -4,7 +4,7 @@ import { OrderResponse } from "../types/order.types";
 
 class OrderService {
   async getAllOrders(userId: string, role: UserRole): Promise<OrderResponse[]> {
-    const whereClause: any = {};
+    const whereClause: Record<string, unknown> = {};
 
     // Buyer hanya bisa lihat pesanan mereka sendiri
     if (role === "buyer") {
@@ -21,7 +21,21 @@ class OrderService {
             id: true,
             name: true,
             email: true,
-            phone: true
+            phone: true,
+            addresses: {
+              where: { is_default: true },
+              take: 1,
+              select: {
+                id: true,
+                label: true,
+                recipient_name: true,
+                phone: true,
+                address_line: true,
+                city: true,
+                province: true,
+                postal_code: true
+              }
+            }
           }
         },
         product: {
@@ -48,6 +62,21 @@ class OrderService {
             grand_total: true,
             shipping_price: true
           }
+        },
+        shipments: {
+          select: {
+            id: true,
+            order_id: true,
+            courier_name: true,
+            tracking_number: true,
+            status: true,
+            created_at: true,
+            updated_at: true
+          },
+          orderBy: {
+            created_at: 'desc'
+          },
+          take: 1
         }
       },
       orderBy: {
@@ -55,7 +84,7 @@ class OrderService {
       }
     });
 
-    return orders;
+    return orders as unknown as OrderResponse[];
   }
 
   async getOrderById(orderId: string, userId: string, role: UserRole): Promise<OrderResponse> {
@@ -67,7 +96,20 @@ class OrderService {
             id: true,
             name: true,
             email: true,
-            phone: true
+            phone: true,
+            addresses: {
+              select: {
+                id: true,
+                label: true,
+                recipient_name: true,
+                phone: true,
+                address_line: true,
+                city: true,
+                province: true,
+                postal_code: true,
+                is_default: true
+              }
+            }
           }
         },
         product: {
@@ -94,6 +136,20 @@ class OrderService {
             status: true,
             grand_total: true,
             shipping_price: true
+          }
+        },
+        shipments: {
+          select: {
+            id: true,
+            order_id: true,
+            courier_name: true,
+            tracking_number: true,
+            status: true,
+            created_at: true,
+            updated_at: true
+          },
+          orderBy: {
+            created_at: 'desc'
           }
         }
       }
@@ -135,7 +191,9 @@ class OrderService {
   async updateOrderStatus(
     orderId: string,
     newStatus: OrderStatus,
-    userId: string
+    userId: string,
+    courierName?: string,
+    trackingNumber?: string
   ): Promise<OrderResponse> {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
@@ -155,10 +213,44 @@ class OrderService {
 
     this.validateStatusTransition(order.status, newStatus);
 
+    // If changing to shipped status, create shipment record
+    if (newStatus === "shipped" && courierName) {
+      await prisma.shipment.create({
+        data: {
+          order_id: orderId,
+          courier_name: courierName,
+          tracking_number: trackingNumber || null,
+          status: "shipping"
+        }
+      });
+    }
+
     const updatedOrder = await prisma.order.update({
       where: { id: orderId },
       data: { status: newStatus },
       include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            addresses: {
+              where: { is_default: true },
+              take: 1,
+              select: {
+                id: true,
+                label: true,
+                recipient_name: true,
+                phone: true,
+                address_line: true,
+                city: true,
+                province: true,
+                postal_code: true
+              }
+            }
+          }
+        },
         product: {
           select: {
             id: true,
@@ -172,8 +264,25 @@ class OrderService {
         checkout: {
           select: {
             id: true,
-            status: true
+            status: true,
+            grand_total: true,
+            shipping_price: true
           }
+        },
+        shipments: {
+          select: {
+            id: true,
+            order_id: true,
+            courier_name: true,
+            tracking_number: true,
+            status: true,
+            created_at: true,
+            updated_at: true
+          },
+          orderBy: {
+            created_at: 'desc'
+          },
+          take: 1
         }
       }
     });
@@ -197,7 +306,7 @@ class OrderService {
       });
     }
 
-    return updatedOrder;
+    return updatedOrder as unknown as OrderResponse;
   }
 }
 

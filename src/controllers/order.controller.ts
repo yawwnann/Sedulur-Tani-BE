@@ -72,7 +72,7 @@ class OrderController {
       }
 
       const { id } = req.params;
-      const { status }: UpdateOrderStatusDTO = req.body;
+      const { status, courier_name, tracking_number }: UpdateOrderStatusDTO = req.body;
 
       if (!id) {
         return res.status(400).json({
@@ -96,10 +96,20 @@ class OrderController {
         });
       }
 
+      // Validate courier info when shipping
+      if (status === "shipped" && !courier_name) {
+        return res.status(400).json({
+          success: false,
+          message: "Courier name is required when shipping"
+        });
+      }
+
       const updatedOrder = await OrderService.updateOrderStatus(
         id,
         status as OrderStatus,
-        user.userId
+        user.userId,
+        courier_name,
+        tracking_number
       );
 
       return res.status(200).json(
