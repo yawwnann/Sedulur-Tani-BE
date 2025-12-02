@@ -124,6 +124,7 @@ model Checkout {
   total_price    Float
   shipping_price Float
   grand_total    Float
+  notes          String?
   status         CheckoutStatus @default(pending)
   created_at     DateTime       @default(now())
   updated_at     DateTime       @updatedAt

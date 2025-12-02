@@ -67,7 +67,8 @@ class CheckoutService {
   async createCheckoutTransaction(
     userId: string,
     cart: any,
-    totals: { totalPrice: number; shippingPrice: number; grandTotal: number }
+    totals: { totalPrice: number; shippingPrice: number; grandTotal: number },
+    notes?: string
   ) {
     const checkout = await prisma.checkout.create({
       data: {
@@ -75,6 +76,7 @@ class CheckoutService {
         total_price: totals.totalPrice,
         shipping_price: totals.shippingPrice,
         grand_total: totals.grandTotal,
+        notes: notes || null,
         status: "pending"
       }
     });
