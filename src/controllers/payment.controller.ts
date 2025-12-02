@@ -25,12 +25,15 @@ class PaymentController {
         });
       }
 
+      console.log('Creating payment for checkout:', checkout_id, 'user:', userId);
+
       const payment = await PaymentService.createPayment(checkout_id, userId);
 
       return res.status(201).json(
         successResponse("Payment created successfully", payment)
       );
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Payment controller error:', error);
       return handleError(res, error);
     }
   }

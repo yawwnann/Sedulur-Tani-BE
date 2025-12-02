@@ -44,37 +44,52 @@ class PaymentService {
   }
 
   async createPayment(checkoutId: string, userId: string): Promise<CreatePaymentResponse> {
-    const checkout = await this.getCheckout(checkoutId, userId);
+    try {
+      const checkout = await this.getCheckout(checkoutId, userId);
 
-    if (checkout.status === 'paid') {
-      throw new Error("Checkout has already been paid");
-    }
+      if (checkout.status === 'paid') {
+        throw new Error("Checkout has already been paid");
+      }
 
-    if (checkout.status === 'expired') {
-      throw new Error("Checkout has expired");
-    }
+      if (checkout.status === 'expired') {
+        throw new Error("Checkout has expired");
+      }
 
-    const orderId = `ORDER-${checkoutId}-${Date.now()}`;
+      const orderId = `ORDER-${checkoutId}-${Date.now()}`;
 
-    const parameter = {
-      transaction_details: {
-        order_id: orderId,
-        gross_amount: checkout.grand_total
-      },
-      customer_details: {
-        first_name: checkout.user.name,
-        email: checkout.user.email,
-        phone: checkout.user.phone || ''
-      },
-      item_details: checkout.orders.map(order => ({
+      // Add shipping cost to item_details if exists
+      const itemDetails = checkout.orders.map(order => ({
         id: order.product_id,
         price: order.price_each,
         quantity: order.quantity,
         name: order.product.name
-      }))
-    };
+      }));
 
-    try {
+      // Add shipping as separate item
+      if (checkout.shipping_price > 0) {
+        itemDetails.push({
+          id: 'SHIPPING',
+          price: checkout.shipping_price,
+          quantity: 1,
+          name: 'Biaya Pengiriman'
+        });
+      }
+
+      const parameter = {
+        transaction_details: {
+          order_id: orderId,
+          gross_amount: checkout.grand_total
+        },
+        customer_details: {
+          first_name: checkout.user.name || 'Customer',
+          email: checkout.user.email,
+          phone: checkout.user.phone || '08123456789'
+        },
+        item_details: itemDetails
+      };
+
+      console.log('Creating Midtrans transaction with params:', JSON.stringify(parameter, null, 2));
+
       const transaction = await this.snap.createTransaction(parameter);
 
       const payment = await prisma.payment.create({
@@ -93,7 +108,8 @@ class PaymentService {
         transaction_id: payment.id
       };
     } catch (error: any) {
-      throw new Error(`Failed to create payment: ${error.message}`);
+      console.error('Payment creation error:', error);
+      throw new Error(`Failed to create payment: ${error.message || error.toString()}`);
     }
   }
 
