@@ -95,22 +95,23 @@ class CheckoutService {
 
     await Promise.all(orderPromises);
 
-    const stockUpdatePromises = cart.items.map((item: any) =>
-      prisma.product.update({
-        where: { id: item.product_id },
-        data: {
-          stock: {
-            decrement: item.quantity
-          }
-        }
-      })
-    );
+    // Don't decrement stock here - will be done after successful payment
+    // const stockUpdatePromises = cart.items.map((item: any) =>
+    //   prisma.product.update({
+    //     where: { id: item.product_id },
+    //     data: {
+    //       stock: {
+    //         decrement: item.quantity
+    //       }
+    //     }
+    //   })
+    // );
+    // await Promise.all(stockUpdatePromises);
 
-    await Promise.all(stockUpdatePromises);
-
-    await prisma.cartItem.deleteMany({
-      where: { cart_id: cart.id }
-    });
+    // Don't clear cart yet - will be cleared after successful payment
+    // await prisma.cartItem.deleteMany({
+    //   where: { cart_id: cart.id }
+    // });
 
     return checkout;
   }

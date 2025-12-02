@@ -184,7 +184,25 @@ class PaymentService {
       }
     });
 
+    // Clear cart after successful payment
     if (checkoutStatus === 'paid') {
+      const checkout = await prisma.checkout.findUnique({
+        where: { id: payment.checkout_id },
+        select: { user_id: true }
+      });
+
+      if (checkout) {
+        const cart = await prisma.cart.findUnique({
+          where: { user_id: checkout.user_id }
+        });
+
+        if (cart) {
+          await prisma.cartItem.deleteMany({
+            where: { cart_id: cart.id }
+          });
+        }
+      }
+
       for (const order of payment.checkout.orders) {
         const product = await prisma.product.findUnique({
           where: { id: order.product_id }
