@@ -28,10 +28,15 @@ app.use(bodyParser.json());
 
 app.use("/api/v1", router);
 
-const PORT = 8686;
+const PORT = process.env.PORT || 8686;
 
-app.listen(PORT, () => {
-  console.log(` Server running on http://localhost:${PORT}`);
-  console.log(` Frontend: http://localhost:3000`);
-  console.log(` CORS enabled for frontend`);
-});
+// For Vercel serverless
+if (process.env.VERCEL) {
+  module.exports = app;
+} else {
+  app.listen(PORT, () => {
+    console.log(` Server running on http://localhost:${PORT}`);
+    console.log(` Frontend: http://localhost:3000`);
+    console.log(` CORS enabled for frontend`);
+  });
+}
