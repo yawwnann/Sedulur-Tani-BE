@@ -113,24 +113,47 @@ class OrderService {
   }
 
   async getOrderById(orderId: string, userId: string, role: UserRole): Promise<any> {
-    // First get the order to get checkout_id
-    const singleOrder = await prisma.order.findUnique({
+    // Try to find by checkout_id first (new format)
+    let checkout = await prisma.checkout.findUnique({
       where: { id: orderId },
-      select: { checkout_id: true, user_id: true }
+      select: { id: true, user_id: true }
     });
 
-    if (!singleOrder) {
-      throw new Error("Order not found");
+    // If not found as checkout, try to find as order (old format compatibility)
+    if (!checkout) {
+      const singleOrder = await prisma.order.findUnique({
+        where: { id: orderId },
+        select: { checkout_id: true, user_id: true }
+      });
+
+      if (!singleOrder) {
+        throw new Error("Order not found");
+      }
+
+      // Buyer hanya bisa akses pesanan mereka sendiri
+      if (role === "buyer" && singleOrder.user_id !== userId) {
+        throw new Error("Forbidden: You can only access your own orders");
+      }
+
+      // Use the checkout_id from order
+      checkout = await prisma.checkout.findUnique({
+        where: { id: singleOrder.checkout_id },
+        select: { id: true, user_id: true }
+      });
+    } else {
+      // Buyer hanya bisa akses pesanan mereka sendiri
+      if (role === "buyer" && checkout.user_id !== userId) {
+        throw new Error("Forbidden: You can only access your own orders");
+      }
     }
 
-    // Buyer hanya bisa akses pesanan mereka sendiri
-    if (role === "buyer" && singleOrder.user_id !== userId) {
-      throw new Error("Forbidden: You can only access your own orders");
+    if (!checkout) {
+      throw new Error("Checkout not found");
     }
 
-    // Get the checkout with all its orders
-    const checkout = await prisma.checkout.findUnique({
-      where: { id: singleOrder.checkout_id },
+    // Get the full checkout with all its orders
+    const fullCheckout = await prisma.checkout.findUnique({
+      where: { id: checkout.id },
       include: {
         user: {
           select: {
@@ -192,29 +215,30 @@ class OrderService {
       }
     });
 
-    if (!checkout) {
+    if (!fullCheckout) {
       throw new Error("Checkout not found");
     }
 
     // Transform data to match expected format
     return {
-      id: checkout.id,
-      checkout_id: checkout.id,
-      user_id: checkout.user_id,
-      status: checkout.status,
-      total_price: checkout.total_price,
-      shipping_price: checkout.shipping_price,
-      grand_total: checkout.grand_total,
-      created_at: checkout.created_at,
-      updated_at: checkout.updated_at,
-      user: checkout.user,
+      id: fullCheckout.id,
+      checkout_id: fullCheckout.id,
+      user_id: fullCheckout.user_id,
+      status: fullCheckout.status,
+      total_price: fullCheckout.total_price,
+      shipping_price: fullCheckout.shipping_price,
+      grand_total: fullCheckout.grand_total,
+      created_at: fullCheckout.created_at,
+      updated_at: fullCheckout.updated_at,
+      user: fullCheckout.user,
       checkout: {
-        id: checkout.id,
-        status: checkout.status,
-        grand_total: checkout.grand_total,
-        shipping_price: checkout.shipping_price
+        id: fullCheckout.id,
+        status: fullCheckout.status,
+        grand_total: fullCheckout.grand_total,
+        shipping_price: fullCheckout.shipping_price,
+        notes: fullCheckout.notes
       },
-      items: checkout.orders.map(order => ({
+      items: fullCheckout.orders.map(order => ({
         id: order.id,
         product_id: order.product_id,
         quantity: order.quantity,
