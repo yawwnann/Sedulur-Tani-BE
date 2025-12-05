@@ -3,7 +3,7 @@ import { OrderStatus, UserRole } from "@prisma/client";
 import { OrderResponse } from "../types/order.types";
 
 class OrderService {
-  async getAllOrders(userId: string, role: UserRole): Promise<OrderResponse[]> {
+  async getAllOrders(userId: string, role: UserRole): Promise<any[]> {
     const whereClause: Record<string, unknown> = {};
 
     // Buyer hanya bisa lihat pesanan mereka sendiri
@@ -13,8 +13,9 @@ class OrderService {
     // Seller bisa lihat SEMUA pesanan dari semua buyer
     // (tidak ada filter untuk seller)
 
-    const orders = await prisma.order.findMany({
-      where: whereClause,
+    // Get checkouts with orders grouped
+    const checkouts = await prisma.checkout.findMany({
+      where: role === "buyer" ? { user_id: userId } : {},
       include: {
         user: {
           select: {
@@ -38,45 +39,41 @@ class OrderService {
             }
           }
         },
-        product: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            price: true,
-            stock: true,
-            image_url: true,
-            seller: {
+        orders: {
+          include: {
+            product: {
               select: {
                 id: true,
                 name: true,
-                email: true
+                description: true,
+                price: true,
+                stock: true,
+                image_url: true,
+                seller: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true
+                  }
+                }
               }
+            },
+            shipments: {
+              select: {
+                id: true,
+                order_id: true,
+                courier_name: true,
+                tracking_number: true,
+                status: true,
+                created_at: true,
+                updated_at: true
+              },
+              orderBy: {
+                created_at: 'desc'
+              },
+              take: 1
             }
           }
-        },
-        checkout: {
-          select: {
-            id: true,
-            status: true,
-            grand_total: true,
-            shipping_price: true
-          }
-        },
-        shipments: {
-          select: {
-            id: true,
-            order_id: true,
-            courier_name: true,
-            tracking_number: true,
-            status: true,
-            created_at: true,
-            updated_at: true
-          },
-          orderBy: {
-            created_at: 'desc'
-          },
-          take: 1
         }
       },
       orderBy: {
@@ -84,12 +81,56 @@ class OrderService {
       }
     });
 
-    return orders as unknown as OrderResponse[];
+    // Transform data to group orders by checkout
+    return checkouts.map(checkout => ({
+      id: checkout.id,
+      checkout_id: checkout.id,
+      user_id: checkout.user_id,
+      status: checkout.status,
+      total_price: checkout.total_price,
+      shipping_price: checkout.shipping_price,
+      grand_total: checkout.grand_total,
+      created_at: checkout.created_at,
+      updated_at: checkout.updated_at,
+      user: checkout.user,
+      checkout: {
+        id: checkout.id,
+        status: checkout.status,
+        grand_total: checkout.grand_total,
+        shipping_price: checkout.shipping_price
+      },
+      items: checkout.orders.map(order => ({
+        id: order.id,
+        product_id: order.product_id,
+        quantity: order.quantity,
+        price_each: order.price_each,
+        total_price: order.total_price,
+        status: order.status,
+        product: order.product,
+        shipments: order.shipments
+      }))
+    }));
   }
 
-  async getOrderById(orderId: string, userId: string, role: UserRole): Promise<OrderResponse> {
-    const order = await prisma.order.findUnique({
+  async getOrderById(orderId: string, userId: string, role: UserRole): Promise<any> {
+    // First get the order to get checkout_id
+    const singleOrder = await prisma.order.findUnique({
       where: { id: orderId },
+      select: { checkout_id: true, user_id: true }
+    });
+
+    if (!singleOrder) {
+      throw new Error("Order not found");
+    }
+
+    // Buyer hanya bisa akses pesanan mereka sendiri
+    if (role === "buyer" && singleOrder.user_id !== userId) {
+      throw new Error("Forbidden: You can only access your own orders");
+    }
+
+    // Get the checkout with all its orders
+    const checkout = await prisma.checkout.findUnique({
+      where: { id: singleOrder.checkout_id },
       include: {
         user: {
           select: {
@@ -112,62 +153,78 @@ class OrderService {
             }
           }
         },
-        product: {
-          select: {
-            id: true,
-            name: true,
-            description: true,
-            price: true,
-            stock: true,
-            image_url: true,
-            seller_id: true,
-            seller: {
+        orders: {
+          include: {
+            product: {
               select: {
                 id: true,
                 name: true,
-                email: true
+                description: true,
+                price: true,
+                stock: true,
+                image_url: true,
+                seller_id: true,
+                seller: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true
+                  }
+                }
+              }
+            },
+            shipments: {
+              select: {
+                id: true,
+                order_id: true,
+                courier_name: true,
+                tracking_number: true,
+                status: true,
+                created_at: true,
+                updated_at: true
+              },
+              orderBy: {
+                created_at: 'desc'
               }
             }
-          }
-        },
-        checkout: {
-          select: {
-            id: true,
-            status: true,
-            grand_total: true,
-            shipping_price: true
-          }
-        },
-        shipments: {
-          select: {
-            id: true,
-            order_id: true,
-            courier_name: true,
-            tracking_number: true,
-            status: true,
-            created_at: true,
-            updated_at: true
-          },
-          orderBy: {
-            created_at: 'desc'
           }
         }
       }
     });
 
-    if (!order) {
-      throw new Error("Order not found");
+    if (!checkout) {
+      throw new Error("Checkout not found");
     }
 
-    // Buyer hanya bisa akses pesanan mereka sendiri
-    if (role === "buyer" && order.user_id !== userId) {
-      throw new Error("Forbidden: You can only access your own orders");
-    }
-
-    // Seller bisa akses semua pesanan
-    // (tidak ada pembatasan untuk seller)
-
-    return order;
+    // Transform data to match expected format
+    return {
+      id: checkout.id,
+      checkout_id: checkout.id,
+      user_id: checkout.user_id,
+      status: checkout.status,
+      total_price: checkout.total_price,
+      shipping_price: checkout.shipping_price,
+      grand_total: checkout.grand_total,
+      created_at: checkout.created_at,
+      updated_at: checkout.updated_at,
+      user: checkout.user,
+      checkout: {
+        id: checkout.id,
+        status: checkout.status,
+        grand_total: checkout.grand_total,
+        shipping_price: checkout.shipping_price
+      },
+      items: checkout.orders.map(order => ({
+        id: order.id,
+        product_id: order.product_id,
+        quantity: order.quantity,
+        price_each: order.price_each,
+        total_price: order.total_price,
+        status: order.status,
+        product: order.product,
+        shipments: order.shipments
+      }))
+    };
   }
 
   validateStatusTransition(currentStatus: OrderStatus, newStatus: OrderStatus): void {
