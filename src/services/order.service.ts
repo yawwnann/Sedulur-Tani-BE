@@ -82,7 +82,7 @@ class OrderService {
     });
 
     // Transform data to group orders by checkout
-    return checkouts.map(checkout => ({
+    const result = checkouts.map(checkout => ({
       id: checkout.id,
       checkout_id: checkout.id,
       user_id: checkout.user_id,
@@ -110,6 +110,8 @@ class OrderService {
         shipments: order.shipments
       }))
     }));
+
+    return result;
   }
 
   async getOrderById(orderId: string, userId: string, role: UserRole): Promise<any> {
@@ -277,16 +279,42 @@ class OrderService {
     courierName?: string,
     trackingNumber?: string
   ): Promise<OrderResponse> {
-    const order = await prisma.order.findUnique({
+    // Try to find as checkout_id first (new format - grouped orders)
+    let checkout = await prisma.checkout.findUnique({
       where: { id: orderId },
       include: {
-        product: true,
-        checkout: true
+        orders: true
       }
     });
 
-    if (!order) {
-      throw new Error("Order not found");
+    let isCheckoutId = !!checkout;
+    let checkoutId = orderId;
+    let ordersToUpdate: any[] = [];
+
+    if (checkout) {
+      // This is a checkout_id, update all orders in this checkout
+      ordersToUpdate = checkout.orders;
+      checkoutId = checkout.id;
+    } else {
+      // Try to find as individual order_id (old format compatibility)
+      const order = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: {
+          product: true,
+          checkout: true
+        }
+      });
+
+      if (!order) {
+        throw new Error("Order not found");
+      }
+
+      ordersToUpdate = [order];
+      checkoutId = order.checkout_id;
+    }
+
+    if (ordersToUpdate.length === 0) {
+      throw new Error("No orders found to update");
     }
 
     // Seller (yang juga admin) bisa update semua order
@@ -295,23 +323,41 @@ class OrderService {
       throw new Error("Forbidden: Only sellers can update order status");
     }
 
-    this.validateStatusTransition(order.status, newStatus);
+    // Validate status transition for the first order (all orders in checkout have same status)
+    this.validateStatusTransition(ordersToUpdate[0].status, newStatus);
 
-    // If changing to shipped status, create shipment record
+    // Update all orders in the checkout
+    await prisma.order.updateMany({
+      where: { 
+        checkout_id: checkoutId 
+      },
+      data: { status: newStatus }
+    });
+
+    // If changing to shipped status, create shipment records for all orders
     if (newStatus === "shipped" && courierName) {
-      await prisma.shipment.create({
-        data: {
-          order_id: orderId,
-          courier_name: courierName,
-          tracking_number: trackingNumber || null,
-          status: "shipping"
+      for (const order of ordersToUpdate) {
+        // Check if shipment already exists for this order
+        const existingShipment = await prisma.shipment.findFirst({
+          where: { order_id: order.id }
+        });
+
+        if (!existingShipment) {
+          await prisma.shipment.create({
+            data: {
+              order_id: order.id,
+              courier_name: courierName,
+              tracking_number: trackingNumber || null,
+              status: "shipping"
+            }
+          });
         }
-      });
+      }
     }
 
-    const updatedOrder = await prisma.order.update({
-      where: { id: orderId },
-      data: { status: newStatus },
+    // Get the updated first order with full details
+    const updatedOrder = await prisma.order.findFirst({
+      where: { checkout_id: checkoutId },
       include: {
         user: {
           select: {
@@ -371,8 +417,13 @@ class OrderService {
       }
     });
 
+    if (!updatedOrder) {
+      throw new Error("Failed to retrieve updated order");
+    }
+
+    // Update checkout status based on order statuses
     const checkoutOrders = await prisma.order.findMany({
-      where: { checkout_id: order.checkout_id }
+      where: { checkout_id: checkoutId }
     });
 
     const allCompleted = checkoutOrders.every(o => o.status === "completed");
@@ -380,12 +431,12 @@ class OrderService {
 
     if (allCompleted) {
       await prisma.checkout.update({
-        where: { id: order.checkout_id },
+        where: { id: checkoutId },
         data: { status: "paid" }
       });
     } else if (anyCancelled && checkoutOrders.every(o => o.status === "cancelled")) {
       await prisma.checkout.update({
-        where: { id: order.checkout_id },
+        where: { id: checkoutId },
         data: { status: "expired" }
       });
     }
