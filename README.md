@@ -21,6 +21,7 @@ Backend API untuk sistem E-Commerce Pupuk yang dibangun dengan Node.js, Express,
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - **Node.js** v14 atau lebih tinggi
 - **MongoDB** database (local/MongoDB Atlas)
 - **npm** atau **yarn**
@@ -29,18 +30,21 @@ Backend API untuk sistem E-Commerce Pupuk yang dibangun dengan Node.js, Express,
 ### Installation
 
 **1. Clone repository:**
+
 ```bash
 git clone <repository-url>
 cd Backend
 ```
 
 **2. Install dependencies:**
+
 ```bash
 npm install
 ```
 
 **3. Setup environment variables:**
 Buat file `.env` di root folder Backend:
+
 ```env
 # Database
 DATABASE_URL="mongodb+srv://username:password@cluster.mongodb.net/ecommerce_pupuk?retryWrites=true&w=majority"
@@ -57,14 +61,21 @@ NODE_ENV="development"
 CLOUDINARY_CLOUD_NAME="your-cloud-name"
 CLOUDINARY_API_KEY="your-api-key"
 CLOUDINARY_API_SECRET="your-api-secret"
+
+# Xendit Payment Gateway
+XENDIT_API_KEY="xnd_development_your_api_key_here"
+XENDIT_WEBHOOK_TOKEN="your_webhook_verification_token_here"
+FRONTEND_URL="http://localhost:3000"
 ```
 
 **4. Generate Prisma Client:**
+
 ```bash
 npx prisma generate
 ```
 
 **5. Push database schema (opsional):**
+
 ```bash
 npx prisma db push
 ```
@@ -72,11 +83,13 @@ npx prisma db push
 **6. Run the server:**
 
 **Development mode** (dengan hot reload):
+
 ```bash
 npm run dev
 ```
 
 **Production build:**
+
 ```bash
 npm run build
 npm start
@@ -176,18 +189,18 @@ Backend/
 
 ### 📂 Penjelasan Folder
 
-| Folder | Fungsi |
-|--------|--------|
-| **controllers/** | Menangani HTTP request & response (thin layer) |
-| **services/** | Business logic & proses bisnis utama |
-| **repositories/** | Query database (Data Access Layer) |
-| **routes/** | Definisi endpoint API |
-| **middleware/** | Fungsi perantara: auth, validation, upload |
-| **validators/** | Validasi input dari user |
-| **types/** | TypeScript type definitions |
-| **utils/** | Helper functions & utilities |
-| **database/** | Konfigurasi & koneksi database |
-| **prisma/** | Schema database & migrations |
+| Folder            | Fungsi                                         |
+| ----------------- | ---------------------------------------------- |
+| **controllers/**  | Menangani HTTP request & response (thin layer) |
+| **services/**     | Business logic & proses bisnis utama           |
+| **repositories/** | Query database (Data Access Layer)             |
+| **routes/**       | Definisi endpoint API                          |
+| **middleware/**   | Fungsi perantara: auth, validation, upload     |
+| **validators/**   | Validasi input dari user                       |
+| **types/**        | TypeScript type definitions                    |
+| **utils/**        | Helper functions & utilities                   |
+| **database/**     | Konfigurasi & koneksi database                 |
+| **prisma/**       | Schema database & migrations                   |
 
 ---
 
@@ -204,14 +217,14 @@ graph TB
     Services[Services Layer<br/>- Business rules & logic<br/>- Data transformation<br/>- Call repositories<br/>- Transaction management]
     Repositories[Repositories Layer<br/>- Database queries<br/>- CRUD operations<br/>- Data mapping]
     Database[(Database<br/>MongoDB + Prisma)]
-    
+
     Client --> Routes
     Routes --> Middleware
     Middleware --> Controllers
     Controllers --> Services
     Services --> Repositories
     Repositories --> Database
-    
+
     style Client fill:#e1f5ff
     style Routes fill:#fff3cd
     style Middleware fill:#f8d7da
@@ -238,14 +251,14 @@ sequenceDiagram
     Auth-->>Router: Token valid ✓
     Router->>Controller: createCheckout()
     Controller->>Service: createCheckout(userId, dto)
-    
+
     Note over Service: Business Logic
     Service->>Service: 1. Validasi alamat
     Service->>Service: 2. Validasi cart
     Service->>Service: 3. Validasi stock
     Service->>Service: 4. Hitung total harga
     Service->>Service: 5. Hitung ongkir
-    
+
     Service->>Repo: createCheckout(data)
     Repo->>DB: INSERT checkout & orders
     DB-->>Repo: Data saved
@@ -261,58 +274,60 @@ sequenceDiagram
 ## 🔌 API Endpoints
 
 ### Base URL
+
 ```
 http://localhost:8686
 ```
 
 ### Authentication & User
 
-| Method | Endpoint | Deskripsi | Auth | Role |
-|--------|----------|-----------|------|------|
-| POST | `/auth/register` | Register user baru | ❌ | - |
-| POST | `/auth/login` | Login user | ❌ | - |
-| GET | `/auth/profile` | Get user profile | ✅ | All |
-| GET | `/me` | Get current user (shortcut) | ✅ | All |
-| GET | `/users/:id` | Get user by ID | ✅ | All |
-| PUT | `/users/:id` | Update user profile | ✅ | Owner |
+| Method | Endpoint         | Deskripsi                   | Auth | Role  |
+| ------ | ---------------- | --------------------------- | ---- | ----- |
+| POST   | `/auth/register` | Register user baru          | ❌   | -     |
+| POST   | `/auth/login`    | Login user                  | ❌   | -     |
+| GET    | `/auth/profile`  | Get user profile            | ✅   | All   |
+| GET    | `/me`            | Get current user (shortcut) | ✅   | All   |
+| GET    | `/users/:id`     | Get user by ID              | ✅   | All   |
+| PUT    | `/users/:id`     | Update user profile         | ✅   | Owner |
 
 ### Address Management
 
-| Method | Endpoint | Deskripsi | Auth | Role |
-|--------|----------|-----------|------|------|
-| POST | `/addresses` | Create alamat baru | ✅ | All |
-| GET | `/addresses` | Get semua alamat user | ✅ | All |
-| GET | `/addresses/:id` | Get alamat by ID | ✅ | Owner |
-| PUT | `/addresses/:id` | Update alamat | ✅ | Owner |
-| DELETE | `/addresses/:id` | Delete alamat | ✅ | Owner |
+| Method | Endpoint         | Deskripsi             | Auth | Role  |
+| ------ | ---------------- | --------------------- | ---- | ----- |
+| POST   | `/addresses`     | Create alamat baru    | ✅   | All   |
+| GET    | `/addresses`     | Get semua alamat user | ✅   | All   |
+| GET    | `/addresses/:id` | Get alamat by ID      | ✅   | Owner |
+| PUT    | `/addresses/:id` | Update alamat         | ✅   | Owner |
+| DELETE | `/addresses/:id` | Delete alamat         | ✅   | Owner |
 
 ### Product Management
 
-| Method | Endpoint | Deskripsi | Auth | Role |
-|--------|----------|-----------|------|------|
-| POST | `/products` | Create produk baru | ✅ | Seller |
-| GET | `/products` | Get semua produk | ❌ | - |
-| GET | `/products/:id` | Get produk by ID | ❌ | - |
-| PUT | `/products/:id` | Update produk | ✅ | Seller (Owner) |
-| DELETE | `/products/:id` | Delete produk | ✅ | Seller (Owner) |
+| Method | Endpoint        | Deskripsi          | Auth | Role           |
+| ------ | --------------- | ------------------ | ---- | -------------- |
+| POST   | `/products`     | Create produk baru | ✅   | Seller         |
+| GET    | `/products`     | Get semua produk   | ❌   | -              |
+| GET    | `/products/:id` | Get produk by ID   | ❌   | -              |
+| PUT    | `/products/:id` | Update produk      | ✅   | Seller (Owner) |
+| DELETE | `/products/:id` | Delete produk      | ✅   | Seller (Owner) |
 
 ### Shopping Cart
 
-| Method | Endpoint | Deskripsi | Auth | Role |
-|--------|----------|-----------|------|------|
-| POST | `/cart` | Add produk ke cart | ✅ | All |
-| GET | `/cart` | Get cart dengan items & total | ✅ | All |
-| PUT | `/cart/:itemId` | Update quantity item | ✅ | Owner |
-| DELETE | `/cart/:itemId` | Remove item dari cart | ✅ | Owner |
+| Method | Endpoint        | Deskripsi                     | Auth | Role  |
+| ------ | --------------- | ----------------------------- | ---- | ----- |
+| POST   | `/cart`         | Add produk ke cart            | ✅   | All   |
+| GET    | `/cart`         | Get cart dengan items & total | ✅   | All   |
+| PUT    | `/cart/:itemId` | Update quantity item          | ✅   | Owner |
+| DELETE | `/cart/:itemId` | Remove item dari cart         | ✅   | Owner |
 
 ### Checkout & Orders
 
-| Method | Endpoint | Deskripsi | Auth | Role |
-|--------|----------|-----------|------|------|
-| POST | `/checkout` | Create checkout dari cart | ✅ | All |
-| GET | `/checkout/:id` | Get checkout details | ✅ | Owner |
+| Method | Endpoint        | Deskripsi                 | Auth | Role  |
+| ------ | --------------- | ------------------------- | ---- | ----- |
+| POST   | `/checkout`     | Create checkout dari cart | ✅   | All   |
+| GET    | `/checkout/:id` | Get checkout details      | ✅   | Owner |
 
 **Dokumentasi lengkap:**
+
 - [PRODUCT_API_GUIDE.md](./PRODUCT_API_GUIDE.md)
 - [CHECKOUT_API_GUIDE.md](./CHECKOUT_API_GUIDE.md)
 
@@ -323,50 +338,60 @@ http://localhost:8686
 ### Collections & Models
 
 **🧑 users**
+
 - User accounts (buyers & sellers)
 - Password di-hash dengan bcrypt (10 salt rounds)
 - Role: `buyer` atau `seller`
 
 **📍 user_addresses**
+
 - Alamat pengiriman user
 - Multiple addresses per user
 - Support default address
 
 **🌾 products**
+
 - Produk pupuk dari seller
 - Data: name, description, price, stock, weight, image
 - Relasi: belongs to seller (User)
 
 **🛒 carts**
+
 - Keranjang belanja
 - One cart per user
 - Relasi: has many cart_items
 
 **📦 cart_items**
+
 - Item dalam cart
 - Relasi: belongs to cart & product
 - Unique constraint: satu produk per cart
 
 **💰 checkouts**
+
 - Record checkout/transaksi
 - Data: total_price, shipping_price, grand_total
 - Status: `pending`, `paid`, `expired`
 
 **📋 orders**
+
 - Order individual dari checkout
 - Data: quantity, price_each, total_price
 - Status: `pending`, `processed`, `shipped`, `completed`, `cancelled`
 
 **🚚 shipments**
+
 - Data pengiriman order
 - Data: courier_name, tracking_number
 - Status: `packing`, `shipping`, `delivered`
 
 **💳 payments**
+
 - Record pembayaran (Midtrans)
 - Data: midtrans_order_id, transaction_status
 
 **🔔 payment_notifications**
+
 - Webhook notifications dari payment gateway
 
 ### Database Schema Diagram (ERD)
@@ -378,16 +403,16 @@ erDiagram
     User ||--|| Cart : owns
     User ||--o{ Checkout : makes
     User ||--o{ Order : places
-    
+
     Cart ||--o{ CartItem : contains
     Product ||--o{ CartItem : "added to"
     Product ||--o{ Order : "ordered in"
-    
+
     Checkout ||--o{ Order : includes
     Checkout ||--o{ Payment : has
-    
+
     Order ||--o{ Shipment : "shipped via"
-    
+
     Payment ||--o{ PaymentNotification : receives
 
     User {
@@ -400,7 +425,7 @@ erDiagram
         datetime created_at
         datetime updated_at
     }
-    
+
     UserAddress {
         string id PK
         string user_id FK
@@ -415,7 +440,7 @@ erDiagram
         datetime created_at
         datetime updated_at
     }
-    
+
     Product {
         string id PK
         string seller_id FK
@@ -428,21 +453,21 @@ erDiagram
         datetime created_at
         datetime updated_at
     }
-    
+
     Cart {
         string id PK
         string user_id FK
         datetime created_at
         datetime updated_at
     }
-    
+
     CartItem {
         string id PK
         string cart_id FK
         string product_id FK
         int quantity
     }
-    
+
     Checkout {
         string id PK
         string user_id FK
@@ -453,7 +478,7 @@ erDiagram
         datetime created_at
         datetime updated_at
     }
-    
+
     Order {
         string id PK
         string checkout_id FK
@@ -466,7 +491,7 @@ erDiagram
         datetime created_at
         datetime updated_at
     }
-    
+
     Shipment {
         string id PK
         string order_id FK
@@ -476,7 +501,7 @@ erDiagram
         datetime created_at
         datetime updated_at
     }
-    
+
     Payment {
         string id PK
         string checkout_id FK
@@ -489,7 +514,7 @@ erDiagram
         datetime created_at
         datetime updated_at
     }
-    
+
     PaymentNotification {
         string id PK
         string payment_id FK
@@ -505,28 +530,34 @@ erDiagram
 ## 🛠️ Tech Stack
 
 ### Backend Framework
+
 - **Node.js** v14+ - JavaScript runtime
 - **Express.js** v4 - Web framework
 - **TypeScript** v5 - Type-safe JavaScript
 
 ### Database
+
 - **MongoDB** - NoSQL database
 - **Prisma** v6.19 - Modern ORM & query builder
 
 ### Authentication & Security
+
 - **JWT (jsonwebtoken)** - Token-based auth
 - **bcrypt** v6 - Password hashing (10 salt rounds)
 
 ### File Upload
+
 - **Cloudinary** - Cloud image storage (optional)
 - **Streamifier** - Stream handling
 
 ### Development Tools
+
 - **nodemon** - Auto-restart server
 - **ts-node** - Run TypeScript directly
 - **TypeScript** - Type checking
 
 ### Dependencies
+
 ```json
 {
   "dependencies": {
@@ -559,11 +590,11 @@ flowchart TD
     Start([User Access App]) --> CheckAuth{Has Token?}
     CheckAuth -->|No| ShowLogin[Show Login/Register Page]
     CheckAuth -->|Yes| ValidateToken[Validate JWT Token]
-    
+
     ShowLogin --> UserChoice{Choose Action}
     UserChoice -->|Register| Register[POST /auth/register]
     UserChoice -->|Login| Login[POST /auth/login]
-    
+
     Register --> ValidateInput1{Input Valid?}
     ValidateInput1 -->|No| ShowError1[Show Error]
     ShowError1 --> ShowLogin
@@ -571,7 +602,7 @@ flowchart TD
     HashPassword --> SaveUser[Save to Database]
     SaveUser --> GenerateToken1[Generate JWT Token]
     GenerateToken1 --> ReturnToken1[Return Token + User Data]
-    
+
     Login --> ValidateInput2{Credentials Valid?}
     ValidateInput2 -->|No| ShowError2[Show Error: Invalid credentials]
     ShowError2 --> ShowLogin
@@ -580,21 +611,21 @@ flowchart TD
     PasswordMatch -->|No| ShowError2
     PasswordMatch -->|Yes| GenerateToken2[Generate JWT Token]
     GenerateToken2 --> ReturnToken2[Return Token + User Data]
-    
+
     ReturnToken1 --> StoreToken[Store Token in Client]
     ReturnToken2 --> StoreToken
     ValidateToken --> TokenValid{Token Valid?}
     TokenValid -->|No| ShowLogin
     TokenValid -->|Yes| StoreToken
-    
+
     StoreToken --> AccessProtected[Access Protected Routes]
     AccessProtected --> AddHeader[Add Header: Authorization Bearer Token]
     AddHeader --> RequestAPI[Make API Request]
     RequestAPI --> Middleware[authMiddleware validates token]
     Middleware --> Success[✓ Access Granted]
-    
+
     Success --> End([Continue Using App])
-    
+
     style Start fill:#e1f5ff
     style End fill:#d4edda
     style ShowError1 fill:#f8d7da
@@ -608,36 +639,36 @@ flowchart TD
 flowchart TD
     Request[API Request with Token] --> AuthMiddleware[authMiddleware]
     AuthMiddleware --> CheckToken{Token Exists?}
-    
+
     CheckToken -->|No| Return401[Return 401 Unauthorized]
     CheckToken -->|Yes| VerifyToken[Verify JWT Token]
-    
+
     VerifyToken --> TokenValid{Token Valid?}
     TokenValid -->|No| Return401
     TokenValid -->|Yes| DecodeToken[Decode Token]
-    
+
     DecodeToken --> ExtractUser[Extract user info:<br/>id, email, role]
     ExtractUser --> AttachUser[Attach to req.user]
     AttachUser --> CheckRole{Need Role Check?}
-    
+
     CheckRole -->|No| AllowAccess[✓ Allow Access]
     CheckRole -->|Yes| RoleMiddleware[roleCheck middleware]
-    
+
     RoleMiddleware --> CompareRole{Role Matches?}
     CompareRole -->|No| Return403[Return 403 Forbidden]
     CompareRole -->|Yes| AllowAccess
-    
+
     AllowAccess --> Controller[Execute Controller]
     Controller --> CheckOwnership{Check Ownership?}
-    
+
     CheckOwnership -->|No| ProcessRequest[Process Request]
     CheckOwnership -->|Yes| VerifyOwner{Is Owner?}
-    
+
     VerifyOwner -->|No| Return403
     VerifyOwner -->|Yes| ProcessRequest
-    
+
     ProcessRequest --> ReturnResponse[Return Response]
-    
+
     style Return401 fill:#f8d7da
     style Return403 fill:#f8d7da
     style AllowAccess fill:#d4edda
@@ -645,6 +676,7 @@ flowchart TD
 ```
 
 **1. Register User**
+
 ```bash
 POST /auth/register
 Content-Type: application/json
@@ -659,6 +691,7 @@ Content-Type: application/json
 ```
 
 Response:
+
 ```json
 {
   "status": "success",
@@ -671,6 +704,7 @@ Response:
 ```
 
 **2. Login**
+
 ```bash
 POST /auth/login
 Content-Type: application/json
@@ -682,6 +716,7 @@ Content-Type: application/json
 ```
 
 Response:
+
 ```json
 {
   "status": "success",
@@ -693,6 +728,7 @@ Response:
 ```
 
 **3. Use Token untuk Request**
+
 ```bash
 GET /me
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
@@ -701,24 +737,33 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ### Authorization (Role-Based)
 
 **Middleware `authMiddleware`**
+
 - Verifikasi JWT token
 - Decode user info (id, email, role)
 - Attach ke `req.user`
 
 **Middleware `roleCheck`**
+
 - Cek role user: `buyer` atau `seller`
 - Block akses jika role tidak sesuai
 
 **Contoh Penggunaan:**
+
 ```typescript
 // Hanya seller yang bisa create product
-router.post('/products', authMiddleware, roleCheck('seller'), ProductController.create);
+router.post(
+  "/products",
+  authMiddleware,
+  roleCheck("seller"),
+  ProductController.create
+);
 
 // Semua authenticated user bisa akses
-router.get('/cart', authMiddleware, CartController.getCart);
+router.get("/cart", authMiddleware, CartController.getCart);
 ```
 
 ### Security Features
+
 ✅ Password di-hash dengan bcrypt (10 salt rounds)  
 ✅ JWT token expires dalam 7 hari  
 ✅ Token validation di setiap protected route  
@@ -732,57 +777,57 @@ router.get('/cart', authMiddleware, CartController.getCart);
 flowchart TD
     Start([User Opens App]) --> Register[Register/Login]
     Register --> Browse[Browse Products<br/>GET /products]
-    
+
     Browse --> SelectProduct[Select Product<br/>GET /products/:id]
     SelectProduct --> AddCart[Add to Cart<br/>POST /cart]
-    
+
     AddCart --> ContinueShopping{Continue Shopping?}
     ContinueShopping -->|Yes| Browse
     ContinueShopping -->|No| ViewCart[View Cart<br/>GET /cart]
-    
+
     ViewCart --> UpdateCart{Need Update?}
     UpdateCart -->|Yes - Change Qty| UpdateQty[PUT /cart/:itemId]
     UpdateCart -->|Yes - Remove Item| RemoveItem[DELETE /cart/:itemId]
     UpdateQty --> ViewCart
     RemoveItem --> ViewCart
     UpdateCart -->|No| CheckAddress{Has Address?}
-    
+
     CheckAddress -->|No| AddAddress[Create Address<br/>POST /addresses]
     CheckAddress -->|Yes| SelectAddress[Select Address<br/>GET /addresses]
     AddAddress --> SelectAddress
-    
+
     SelectAddress --> CreateCheckout[Create Checkout<br/>POST /checkout]
     CreateCheckout --> ValidateStock{Stock Available?}
-    
+
     ValidateStock -->|No| ShowError[Show Error:<br/>Insufficient Stock]
     ShowError --> ViewCart
-    
+
     ValidateStock -->|Yes| Calculate[Calculate:<br/>- Total Price<br/>- Shipping Cost<br/>- Grand Total]
     Calculate --> CreateOrder[Create Order Records]
     CreateOrder --> ReduceStock[Reduce Product Stock]
     ReduceStock --> ClearCart[Clear Cart Items]
-    
+
     ClearCart --> ShowSummary[Show Order Summary<br/>GET /checkout/:id]
     ShowSummary --> ProcessPayment[Process Payment<br/>Future: Midtrans]
-    
+
     ProcessPayment --> PaymentSuccess{Payment Success?}
     PaymentSuccess -->|No| PaymentFailed[Order Status: Cancelled]
     PaymentSuccess -->|Yes| UpdateStatus[Order Status: Paid]
-    
+
     UpdateStatus --> PrepareShipment[Prepare Shipment<br/>Future Feature]
     PrepareShipment --> ShipOrder[Ship Order<br/>Future Feature]
     ShipOrder --> TrackOrder[Track Order<br/>Future Feature]
     TrackOrder --> OrderComplete[Order Delivered]
-    
+
     OrderComplete --> End([End])
     PaymentFailed --> End
-    
+
     style Start fill:#e1f5ff
     style End fill:#d4edda
     style ShowError fill:#f8d7da
     style PaymentFailed fill:#f8d7da
     style OrderComplete fill:#d4edda
-```  
+```
 
 ---
 
@@ -791,6 +836,7 @@ flowchart TD
 ### Using cURL
 
 **1. Register:**
+
 ```bash
 curl -X POST http://localhost:8686/auth/register \
   -H "Content-Type: application/json" \
@@ -803,6 +849,7 @@ curl -X POST http://localhost:8686/auth/register \
 ```
 
 **2. Login:**
+
 ```bash
 curl -X POST http://localhost:8686/auth/login \
   -H "Content-Type: application/json" \
@@ -813,12 +860,14 @@ curl -X POST http://localhost:8686/auth/login \
 ```
 
 **3. Get Profile (butuh token):**
+
 ```bash
 curl -X GET http://localhost:8686/me \
   -H "Authorization: Bearer YOUR_TOKEN_HERE"
 ```
 
 **4. Create Product (seller only):**
+
 ```bash
 curl -X POST http://localhost:8686/products \
   -H "Authorization: Bearer YOUR_TOKEN" \
@@ -833,6 +882,7 @@ curl -X POST http://localhost:8686/products \
 ```
 
 **5. Add to Cart:**
+
 ```bash
 curl -X POST http://localhost:8686/cart \
   -H "Authorization: Bearer YOUR_TOKEN" \
@@ -844,12 +894,14 @@ curl -X POST http://localhost:8686/cart \
 ```
 
 **6. Get Cart:**
+
 ```bash
 curl -X GET http://localhost:8686/cart \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
 
 **7. Create Checkout:**
+
 ```bash
 curl -X POST http://localhost:8686/checkout \
   -H "Authorization: Bearer YOUR_TOKEN" \
@@ -864,23 +916,27 @@ curl -X POST http://localhost:8686/checkout \
 ### Using Postman
 
 **1. Setup Environment:**
+
 - Variable: `base_url` = `http://localhost:8686`
 - Variable: `token` = (akan di-set otomatis)
 
 **2. Import Endpoints:**
+
 - Create collection "E-Commerce Pupuk API"
 - Add requests sesuai endpoint di atas
 
 **3. Set Auth:**
+
 - Tab Authorization → Type: Bearer Token
 - Token: `{{token}}`
 
 **4. Auto-set Token:**
 Di Tests tab untuk login endpoint:
+
 ```javascript
 pm.test("Save token", function () {
-    var jsonData = pm.response.json();
-    pm.environment.set("token", jsonData.data.token);
+  var jsonData = pm.response.json();
+  pm.environment.set("token", jsonData.data.token);
 });
 ```
 
@@ -909,6 +965,7 @@ npx prisma studio        # Open Prisma Studio (GUI)
 ## 🌟 Features
 
 ### ✅ Implemented
+
 - User registration & authentication (JWT)
 - Role-based access control (buyer/seller)
 - User profile management
@@ -928,6 +985,7 @@ npx prisma studio        # Open Prisma Studio (GUI)
 - Error handling & response formatting
 
 ### 🚧 Coming Soon / TODO
+
 - [ ] Payment gateway integration (Midtrans)
 - [ ] Payment webhook handling
 - [ ] Order status updates
@@ -951,7 +1009,9 @@ npx prisma studio        # Open Prisma Studio (GUI)
 ## 🐛 Troubleshooting
 
 ### Problem: Port already in use
+
 **Solution:**
+
 ```bash
 # Windows (PowerShell)
 Get-Process -Id (Get-NetTCPConnection -LocalPort 8686).OwningProcess | Stop-Process -Force
@@ -961,14 +1021,18 @@ const PORT = 8787; // ganti ke port lain
 ```
 
 ### Problem: Database connection error
+
 **Solution:**
+
 - Cek `DATABASE_URL` di `.env`
 - Pastikan MongoDB running (local) atau cek koneksi internet (Atlas)
 - Pastikan IP address di-whitelist di MongoDB Atlas
 - Test connection: `npx prisma db push`
 
 ### Problem: Prisma Client error
+
 **Solution:**
+
 ```bash
 # Regenerate Prisma Client
 npx prisma generate
@@ -980,25 +1044,33 @@ npx prisma generate
 ```
 
 ### Problem: JWT Secret not found
+
 **Solution:**
+
 - Pastikan file `.env` ada di root Backend/
 - Pastikan `JWT_SECRET` sudah di-set
 - Restart server setelah update `.env`
 
 ### Problem: Authentication failed / Token invalid
+
 **Solution:**
+
 - Cek format header: `Authorization: Bearer <token>`
 - Pastikan token belum expired (default 7 hari)
 - Login ulang untuk dapat token baru
 
 ### Problem: Role check failed
+
 **Solution:**
+
 - Pastikan user memiliki role yang sesuai
 - Seller tidak bisa akses endpoint buyer, vice versa
 - Cek di `/me` untuk lihat role user
 
 ### Problem: Build errors TypeScript
+
 **Solution:**
+
 ```bash
 # Cek error detail
 npm run build
@@ -1021,12 +1093,15 @@ ISC
 ## 👨‍💻 Development Notes
 
 ### Known Issues
+
 1. **Duplicate files:**
+
    - `checkout.service.ts` dan `CheckoutService.ts` → perlu cleanup
    - `shipping.util.ts` dan `shiping.util.ts` (typo) → perlu cleanup
    - `imageUpload.ts` dan `uploadHelper.ts` → perlu cleanup
 
 2. **Architecture inconsistency:**
+
    - Beberapa service menggunakan repository pattern
    - Beberapa service query langsung ke Prisma
    - Perlu standardisasi
@@ -1037,6 +1112,7 @@ ISC
    - Admin panel belum ada
 
 ### Recommended Improvements
+
 - [ ] Cleanup duplicate files
 - [ ] Standardize architecture (gunakan repository pattern konsisten)
 - [ ] Add input validation middleware

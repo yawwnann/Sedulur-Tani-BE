@@ -1,6 +1,9 @@
 import { Request, Response } from "express";
 import PaymentService from "../services/payment.service";
-import { CreatePaymentDTO, MidtransNotification } from "../types/payment.types";
+import {
+  CreatePaymentDTO,
+  XenditInvoiceCallback,
+} from "../types/payment.types";
 import { successResponse } from "../utils/responseFormatter";
 import { handleError } from "../utils/errorHandler";
 
@@ -12,7 +15,7 @@ class PaymentController {
       if (!userId) {
         return res.status(401).json({
           success: false,
-          message: "Unauthorized"
+          message: "Unauthorized",
         });
       }
 
@@ -21,38 +24,54 @@ class PaymentController {
       if (!checkout_id) {
         return res.status(400).json({
           success: false,
-          message: "checkout_id is required"
+          message: "checkout_id is required",
         });
       }
 
-      console.log('Creating payment for checkout:', checkout_id, 'user:', userId);
+      console.log(
+        "Creating payment for checkout:",
+        checkout_id,
+        "user:",
+        userId
+      );
 
       const payment = await PaymentService.createPayment(checkout_id, userId);
 
-      return res.status(201).json(
-        successResponse("Payment created successfully", payment)
-      );
+      return res
+        .status(201)
+        .json(successResponse("Payment created successfully", payment));
     } catch (error: any) {
-      console.error('Payment controller error:', error);
+      console.error("Payment controller error:", error);
       return handleError(res, error);
     }
   }
 
   async webhook(req: Request, res: Response): Promise<Response> {
     try {
-      const notification: MidtransNotification = req.body;
+      // Verify Xendit callback token
+      const callbackToken = req.headers["x-callback-token"] as string;
 
-      await PaymentService.handleWebhook(notification);
+      if (!PaymentService.verifyWebhookSignature(callbackToken)) {
+        return res.status(401).json({
+          success: false,
+          message: "Invalid callback token",
+        });
+      }
+
+      const callback: XenditInvoiceCallback = req.body;
+
+      await PaymentService.handleWebhook(callback);
 
       return res.status(200).json({
         success: true,
-        message: "Notification processed"
+        message: "Notification processed",
       });
     } catch (error) {
       console.error("Webhook error:", error);
       return res.status(500).json({
         success: false,
-        message: error instanceof Error ? error.message : "Webhook processing failed"
+        message:
+          error instanceof Error ? error.message : "Webhook processing failed",
       });
     }
   }
@@ -64,7 +83,7 @@ class PaymentController {
       if (!userId) {
         return res.status(401).json({
           success: false,
-          message: "Unauthorized"
+          message: "Unauthorized",
         });
       }
 
@@ -73,53 +92,54 @@ class PaymentController {
       if (!checkoutId) {
         return res.status(400).json({
           success: false,
-          message: "checkoutId is required"
+          message: "checkoutId is required",
         });
       }
 
       const status = await PaymentService.getPaymentStatus(checkoutId, userId);
 
-      return res.status(200).json(
-        successResponse("Payment status retrieved successfully", status)
-      );
+      return res
+        .status(200)
+        .json(successResponse("Payment status retrieved successfully", status));
     } catch (error) {
       return handleError(res, error);
     }
   }
 
-  async testMidtransConfig(req: Request, res: Response): Promise<Response> {
+  async testXenditConfig(req: Request, res: Response): Promise<Response> {
     try {
-      const config = await PaymentService.testMidtransConnection();
+      const config = await PaymentService.testXenditConnection();
 
-      return res.status(200).json(
-        successResponse("Midtrans configuration test completed", config)
-      );
+      return res
+        .status(200)
+        .json(successResponse("Xendit configuration test completed", config));
     } catch (error) {
       return handleError(res, error);
     }
   }
 
-  async testCreateTransaction(req: Request, res: Response): Promise<Response> {
+  async testCreateInvoice(req: Request, res: Response): Promise<Response> {
     try {
-      const { amount, customer_name, customer_email, customer_phone } = req.body;
+      const { amount, customer_name, customer_email, customer_phone } =
+        req.body;
 
       if (!amount || !customer_name || !customer_email) {
         return res.status(400).json({
           success: false,
-          message: "amount, customer_name, and customer_email are required"
+          message: "amount, customer_name, and customer_email are required",
         });
       }
 
-      const result = await PaymentService.testCreateTransaction({
+      const result = await PaymentService.testCreateInvoice({
         amount: parseFloat(amount),
         customer_name,
         customer_email,
-        customer_phone: customer_phone || ''
+        customer_phone: customer_phone || "",
       });
 
-      return res.status(200).json(
-        successResponse("Test transaction created successfully", result)
-      );
+      return res
+        .status(200)
+        .json(successResponse("Test invoice created successfully", result));
     } catch (error) {
       return handleError(res, error);
     }

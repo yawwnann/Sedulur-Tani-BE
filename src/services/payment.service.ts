@@ -1,22 +1,25 @@
 import prisma from "../database/prisma";
-import { CreatePaymentResponse, MidtransNotification } from "../types/payment.types";
+import {
+  CreatePaymentResponse,
+  XenditInvoiceCallback,
+} from "../types/payment.types";
 import * as crypto from "crypto";
 
-const midtransClient = require('midtrans-client');
+const Xendit = require("xendit-node");
 
 class PaymentService {
-  private snap: any;
+  private xenditClient: any;
 
   constructor() {
-    this.initializeSnap();
+    this.initializeXendit();
   }
 
-  private initializeSnap() {
-    this.snap = new midtransClient.Snap({
-      isProduction: process.env.MIDTRANS_IS_PRODUCTION === 'true',
-      serverKey: process.env.MIDTRANS_SERVER_KEY,
-      clientKey: process.env.MIDTRANS_CLIENT_KEY
-    });
+  private initializeXendit() {
+    const apiKey = process.env.XENDIT_API_KEY;
+    if (!apiKey) {
+      throw new Error("XENDIT_API_KEY is not configured");
+    }
+    this.xenditClient = new Xendit({ secretKey: apiKey });
   }
 
   async getCheckout(checkoutId: string, userId: string) {
@@ -26,10 +29,10 @@ class PaymentService {
         user: true,
         orders: {
           include: {
-            product: true
-          }
-        }
-      }
+            product: true,
+          },
+        },
+      },
     });
 
     if (!checkout) {
@@ -43,105 +46,117 @@ class PaymentService {
     return checkout;
   }
 
-  async createPayment(checkoutId: string, userId: string): Promise<CreatePaymentResponse> {
+  async createPayment(
+    checkoutId: string,
+    userId: string
+  ): Promise<CreatePaymentResponse> {
     try {
       const checkout = await this.getCheckout(checkoutId, userId);
 
-      if (checkout.status === 'paid') {
+      if (checkout.status === "paid") {
         throw new Error("Checkout has already been paid");
       }
 
-      if (checkout.status === 'expired') {
+      if (checkout.status === "expired") {
         throw new Error("Checkout has expired");
       }
 
-      const orderId = `ORDER-${checkoutId}-${Date.now()}`;
+      const externalId = `ORDER-${checkoutId}-${Date.now()}`;
 
-      // Add shipping cost to item_details if exists
-      const itemDetails = checkout.orders.map(order => ({
-        id: order.product_id,
-        price: order.price_each,
+      // Prepare item details
+      const items = checkout.orders.map((order) => ({
+        name: order.product.name,
         quantity: order.quantity,
-        name: order.product.name
+        price: order.price_each,
+        category: order.product.category || "Other",
       }));
 
       // Add shipping as separate item
       if (checkout.shipping_price > 0) {
-        itemDetails.push({
-          id: 'SHIPPING',
-          price: checkout.shipping_price,
+        items.push({
+          name: "Biaya Pengiriman",
           quantity: 1,
-          name: 'Biaya Pengiriman'
+          price: checkout.shipping_price,
+          category: "Shipping",
         });
       }
 
-      const parameter = {
-        transaction_details: {
-          order_id: orderId,
-          gross_amount: checkout.grand_total
-        },
-        customer_details: {
-          first_name: checkout.user.name || 'Customer',
+      const invoiceData = {
+        externalId: externalId,
+        amount: checkout.grand_total,
+        payerEmail: checkout.user.email,
+        description: `Payment for order ${externalId}`,
+        customer: {
+          givenNames: checkout.user.name || "Customer",
           email: checkout.user.email,
-          phone: checkout.user.phone || '08123456789'
+          mobileNumber: checkout.user.phone || "+628123456789",
         },
-        item_details: itemDetails
+        customerNotificationPreference: {
+          invoiceCreated: ["email"],
+          invoicePaid: ["email"],
+        },
+        items: items,
+        currency: "IDR",
+        invoiceDuration: 86400, // 24 hours
+        successRedirectUrl: `${process.env.FRONTEND_URL}/payment/success`,
+        failureRedirectUrl: `${process.env.FRONTEND_URL}/payment/failed`,
       };
 
-      console.log('Creating Midtrans transaction with params:', JSON.stringify(parameter, null, 2));
+      console.log(
+        "Creating Xendit invoice with params:",
+        JSON.stringify(invoiceData, null, 2)
+      );
 
-      const transaction = await this.snap.createTransaction(parameter);
+      const { Invoice } = this.xenditClient;
+      const invoice = await Invoice.createInvoice(invoiceData);
 
       const payment = await prisma.payment.create({
         data: {
           checkout_id: checkoutId,
-          midtrans_order_id: orderId,
-          transaction_id: transaction.token,
+          xendit_invoice_id: invoice.id,
+          transaction_id: externalId,
           gross_amount: checkout.grand_total,
-          transaction_status: 'pending'
-        }
+          transaction_status: "pending",
+        },
       });
 
       return {
-        snap_token: transaction.token,
-        redirect_url: transaction.redirect_url,
-        transaction_id: payment.id
+        invoice_url: invoice.invoiceUrl,
+        invoice_id: invoice.id,
+        transaction_id: payment.id,
       };
     } catch (error: any) {
-      console.error('Payment creation error:', error);
-      throw new Error(`Failed to create payment: ${error.message || error.toString()}`);
+      console.error("Payment creation error:", error);
+      throw new Error(
+        `Failed to create payment: ${error.message || error.toString()}`
+      );
     }
   }
 
-  verifySignature(notification: MidtransNotification): boolean {
-    const serverKey = process.env.MIDTRANS_SERVER_KEY || '';
-    const orderId = notification.order_id;
-    const statusCode = notification.status_code;
-    const grossAmount = notification.gross_amount;
-    const signatureKey = notification.signature_key;
-
-    const hash = crypto
-      .createHash('sha512')
-      .update(`${orderId}${statusCode}${grossAmount}${serverKey}`)
-      .digest('hex');
-
-    return hash === signatureKey;
+  verifyWebhookSignature(token: string, webhookId?: string): boolean {
+    const xenditCallbackToken = process.env.XENDIT_WEBHOOK_TOKEN || "";
+    if (!xenditCallbackToken) {
+      console.warn(
+        "XENDIT_WEBHOOK_TOKEN not configured, skipping verification"
+      );
+      return true; // Allow for development
+    }
+    return token === xenditCallbackToken;
   }
 
-  async handleWebhook(notification: MidtransNotification): Promise<void> {
-    if (!this.verifySignature(notification)) {
-      throw new Error("Invalid signature");
-    }
+  async handleWebhook(callback: XenditInvoiceCallback): Promise<void> {
+    // For Xendit, signature verification is done via callback token in headers
+    // This should be verified in the controller/route middleware
 
     const payment = await prisma.payment.findUnique({
-      where: { midtrans_order_id: notification.order_id },
+      where: { xendit_invoice_id: callback.id },
       include: {
         checkout: {
           include: {
-            orders: true
-          }
-        }
-      }
+            orders: true,
+          },
+        },
+      },
     });
 
     if (!payment) {
@@ -151,85 +166,85 @@ class PaymentService {
     await prisma.paymentNotification.create({
       data: {
         payment_id: payment.id,
-        raw_body: JSON.stringify(notification)
-      }
+        raw_body: JSON.stringify(callback),
+      },
     });
 
-    const transactionStatus = notification.transaction_status;
-    const fraudStatus = notification.fraud_status;
+    const invoiceStatus = callback.status.toUpperCase();
 
-    let checkoutStatus: 'pending' | 'paid' | 'expired' = 'pending';
-    let orderStatus: 'pending' | 'processed' | 'shipped' | 'completed' | 'cancelled' = 'pending';
+    let checkoutStatus: "pending" | "paid" | "expired" = "pending";
+    let orderStatus:
+      | "pending"
+      | "processed"
+      | "shipped"
+      | "completed"
+      | "cancelled" = "pending";
 
-    if (transactionStatus === 'capture') {
-      if (fraudStatus === 'accept') {
-        checkoutStatus = 'paid';
-        orderStatus = 'processed';
-      }
-    } else if (transactionStatus === 'settlement') {
-      checkoutStatus = 'paid';
-      orderStatus = 'processed';
-    } else if (transactionStatus === 'cancel' || transactionStatus === 'deny' || transactionStatus === 'expire') {
-      checkoutStatus = 'expired';
-      orderStatus = 'cancelled';
-    } else if (transactionStatus === 'pending') {
-      checkoutStatus = 'pending';
-      orderStatus = 'pending';
+    // Xendit invoice statuses: PENDING, PAID, EXPIRED, SETTLED
+    if (invoiceStatus === "PAID" || invoiceStatus === "SETTLED") {
+      checkoutStatus = "paid";
+      orderStatus = "processed";
+    } else if (invoiceStatus === "EXPIRED") {
+      checkoutStatus = "expired";
+      orderStatus = "cancelled";
+    } else if (invoiceStatus === "PENDING") {
+      checkoutStatus = "pending";
+      orderStatus = "pending";
     }
 
     await prisma.payment.update({
       where: { id: payment.id },
       data: {
-        transaction_status: transactionStatus,
-        payment_type: notification.payment_type,
-        transaction_time: notification.transaction_time ? new Date(notification.transaction_time) : null
-      }
+        transaction_status: invoiceStatus.toLowerCase(),
+        payment_method: callback.payment_method,
+        transaction_time: callback.paid_at ? new Date(callback.paid_at) : null,
+      },
     });
 
     await prisma.checkout.update({
       where: { id: payment.checkout_id },
       data: {
-        status: checkoutStatus
-      }
+        status: checkoutStatus,
+      },
     });
 
     await prisma.order.updateMany({
       where: { checkout_id: payment.checkout_id },
       data: {
-        status: orderStatus
-      }
+        status: orderStatus,
+      },
     });
 
     // Clear cart after successful payment
-    if (checkoutStatus === 'paid') {
+    if (checkoutStatus === "paid") {
       const checkout = await prisma.checkout.findUnique({
         where: { id: payment.checkout_id },
-        select: { user_id: true }
+        select: { user_id: true },
       });
 
       if (checkout) {
         const cart = await prisma.cart.findUnique({
-          where: { user_id: checkout.user_id }
+          where: { user_id: checkout.user_id },
         });
 
         if (cart) {
           await prisma.cartItem.deleteMany({
-            where: { cart_id: cart.id }
+            where: { cart_id: cart.id },
           });
         }
       }
 
       for (const order of payment.checkout.orders) {
         const product = await prisma.product.findUnique({
-          where: { id: order.product_id }
+          where: { id: order.product_id },
         });
 
         if (product) {
           await prisma.product.update({
             where: { id: order.product_id },
             data: {
-              stock: product.stock - order.quantity
-            }
+              stock: product.stock - order.quantity,
+            },
           });
         }
       }
@@ -241,7 +256,7 @@ class PaymentService {
 
     const payment = await prisma.payment.findFirst({
       where: { checkout_id: checkoutId },
-      orderBy: { created_at: 'desc' }
+      orderBy: { created_at: "desc" },
     });
 
     if (!payment) {
@@ -252,102 +267,86 @@ class PaymentService {
       checkout_id: checkoutId,
       transaction_id: payment.id,
       transaction_status: payment.transaction_status,
-      payment_type: payment.payment_type || undefined,
+      payment_method: payment.payment_method || undefined,
       gross_amount: payment.gross_amount,
-      transaction_time: payment.transaction_time || undefined
+      transaction_time: payment.transaction_time || undefined,
     };
   }
 
-  async testMidtransConnection() {
-    const serverKey = process.env.MIDTRANS_SERVER_KEY;
-    const clientKey = process.env.MIDTRANS_CLIENT_KEY;
-    const isProduction = process.env.MIDTRANS_IS_PRODUCTION === 'true';
+  async testXenditConnection() {
+    const apiKey = process.env.XENDIT_API_KEY;
 
-    if (!serverKey || serverKey === 'your_midtrans_server_key') {
-      throw new Error("Midtrans Server Key is not configured properly");
+    if (!apiKey) {
+      throw new Error("XENDIT_API_KEY is not configured");
     }
 
-    if (!clientKey || clientKey === 'your_midtrans_client_key') {
-      throw new Error("Midtrans Client Key is not configured properly");
+    if (!apiKey.startsWith("xnd_")) {
+      throw new Error(
+        "Invalid Xendit API Key format. Expected to start with 'xnd_'"
+      );
     }
 
-    // Validate server key format
-    const expectedPrefix = isProduction ? 'Mid-server-' : 'SB-Mid-server-';
-    if (!serverKey.startsWith(expectedPrefix)) {
-      throw new Error(`Invalid Server Key format. Expected to start with '${expectedPrefix}', got '${serverKey.substring(0, 15)}...'`);
-    }
-
-    // Validate client key format
-    const expectedClientPrefix = isProduction ? 'Mid-client-' : 'SB-Mid-client-';
-    if (!clientKey.startsWith(expectedClientPrefix)) {
-      throw new Error(`Invalid Client Key format. Expected to start with '${expectedClientPrefix}', got '${clientKey.substring(0, 15)}...'`);
-    }
-
-    // Test API connection with a simple ping
     try {
-      const testSnap = new midtransClient.Snap({
-        isProduction: isProduction,
-        serverKey: serverKey,
-        clientKey: clientKey
-      });
+      const testClient = new Xendit({ secretKey: apiKey });
+      const { Balance } = testClient;
+
+      // Test API connection by checking balance
+      const balance = await Balance.getBalance({ accountType: "CASH" });
 
       return {
         configured: true,
-        environment: isProduction ? 'production' : 'sandbox',
-        server_key_prefix: serverKey.substring(0, 15) + '...',
-        client_key_prefix: clientKey.substring(0, 15) + '...',
-        server_key_length: serverKey.length,
-        client_key_length: clientKey.length,
-        snap_initialized: !!this.snap,
-        validation: 'Keys format is valid'
+        environment: apiKey.includes("development")
+          ? "development"
+          : "production",
+        api_key_prefix: apiKey.substring(0, 15) + "...",
+        api_key_length: apiKey.length,
+        client_initialized: !!this.xenditClient,
+        validation: "API Key format is valid",
+        balance: balance,
       };
     } catch (error: any) {
-      throw new Error(`Midtrans initialization failed: ${error.message}`);
+      throw new Error(`Xendit initialization failed: ${error.message}`);
     }
   }
 
-  async testCreateTransaction(data: {
+  async testCreateInvoice(data: {
     amount: number;
     customer_name: string;
     customer_email: string;
     customer_phone: string;
   }) {
-    // Reinitialize snap with current env vars to ensure latest keys are used
-    this.initializeSnap();
+    // Reinitialize client with current env vars to ensure latest keys are used
+    this.initializeXendit();
 
-    const orderId = `TEST-ORDER-${Date.now()}`;
+    const externalId = `TEST-ORDER-${Date.now()}`;
 
-    const parameter = {
-      transaction_details: {
-        order_id: orderId,
-        gross_amount: data.amount
-      },
-      customer_details: {
-        first_name: data.customer_name,
+    const invoiceData = {
+      externalId: externalId,
+      amount: data.amount,
+      payerEmail: data.customer_email,
+      description: "Test invoice",
+      customer: {
+        givenNames: data.customer_name,
         email: data.customer_email,
-        phone: data.customer_phone
+        mobileNumber: data.customer_phone,
       },
-      item_details: [
-        {
-          id: 'TEST-ITEM-1',
-          price: data.amount,
-          quantity: 1,
-          name: 'Test Product'
-        }
-      ]
+      currency: "IDR",
+      invoiceDuration: 86400,
     };
 
     try {
-      const transaction = await this.snap.createTransaction(parameter);
+      const { Invoice } = this.xenditClient;
+      const invoice = await Invoice.createInvoice(invoiceData);
 
       return {
-        order_id: orderId,
-        snap_token: transaction.token,
-        redirect_url: transaction.redirect_url,
-        message: 'Test transaction created successfully. Use snap_token for payment.'
+        external_id: externalId,
+        invoice_id: invoice.id,
+        invoice_url: invoice.invoiceUrl,
+        message:
+          "Test invoice created successfully. Use invoice_url for payment.",
       };
     } catch (error: any) {
-      throw new Error(`Failed to create test transaction: ${error.message}`);
+      throw new Error(`Failed to create test invoice: ${error.message}`);
     }
   }
 }
