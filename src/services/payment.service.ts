@@ -108,7 +108,9 @@ class PaymentService {
       );
 
       const { Invoice } = this.xenditClient;
-      const invoice = await Invoice.createInvoice(invoiceData);
+      const invoice = await Invoice.createInvoice({
+        data: invoiceData
+      });
 
       const payment = await prisma.payment.create({
         data: {
@@ -336,7 +338,9 @@ class PaymentService {
 
     try {
       const { Invoice } = this.xenditClient;
-      const invoice = await Invoice.createInvoice(invoiceData);
+      const invoice = await Invoice.createInvoice({
+        data: invoiceData
+      });
 
       return {
         external_id: externalId,
