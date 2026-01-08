@@ -98,8 +98,8 @@ class PaymentService {
         items: items,
         currency: "IDR",
         invoiceDuration: 86400, // 24 hours
-        successRedirectUrl: `${process.env.FRONTEND_URL}/payment/success`,
-        failureRedirectUrl: `${process.env.FRONTEND_URL}/payment/failed`,
+        successRedirectUrl: `${process.env.FRONTEND_URL}/orders`,
+        failureRedirectUrl: `${process.env.FRONTEND_URL}/checkout`,
       };
 
       console.log(
@@ -109,7 +109,7 @@ class PaymentService {
 
       const { Invoice } = this.xenditClient;
       const invoice = await Invoice.createInvoice({
-        data: invoiceData
+        data: invoiceData,
       });
 
       const payment = await prisma.payment.create({
@@ -339,7 +339,7 @@ class PaymentService {
     try {
       const { Invoice } = this.xenditClient;
       const invoice = await Invoice.createInvoice({
-        data: invoiceData
+        data: invoiceData,
       });
 
       return {
