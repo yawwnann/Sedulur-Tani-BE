@@ -5,7 +5,7 @@ import {
 } from "../types/payment.types";
 import * as crypto from "crypto";
 
-const Xendit = require("xendit-node");
+const { Xendit } = require("xendit-node");
 
 class PaymentService {
   private xenditClient: any;

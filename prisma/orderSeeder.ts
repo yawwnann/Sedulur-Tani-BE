@@ -11,14 +11,18 @@ async function main() {
   });
 
   if (!buyer) {
-    console.error("❌ No buyer found. Please run 'npm run seed' first to create users.");
+    console.error(
+      "❌ No buyer found. Please run 'npm run seed' first to create users."
+    );
     return;
   }
 
   // 2. Get Products
   const products = await prisma.product.findMany();
   if (products.length === 0) {
-    console.error("❌ No products found. Please run 'npm run seed' first to create products.");
+    console.error(
+      "❌ No products found. Please run 'npm run seed' first to create products."
+    );
     return;
   }
 
@@ -28,7 +32,13 @@ async function main() {
   // 3. Create Random Orders
   const TOTAL_CHECKOUTS = 15;
   const CHECKOUT_STATUSES = ["pending", "paid", "expired"];
-  const ORDER_STATUSES = ["pending", "processed", "shipped", "completed", "cancelled"];
+  const ORDER_STATUSES = [
+    "pending",
+    "processed",
+    "shipped",
+    "completed",
+    "cancelled",
+  ];
   const SHIPMENT_STATUSES = ["packing", "shipping", "delivered"];
 
   for (let i = 0; i < TOTAL_CHECKOUTS; i++) {
@@ -36,7 +46,9 @@ async function main() {
     const itemCount = Math.floor(Math.random() * 3) + 1;
     const selectedProducts = [];
     for (let j = 0; j < itemCount; j++) {
-      selectedProducts.push(products[Math.floor(Math.random() * products.length)]);
+      selectedProducts.push(
+        products[Math.floor(Math.random() * products.length)]
+      );
     }
 
     // B. Calculate totals
@@ -52,7 +64,8 @@ async function main() {
 
     // C. Determine status logic (Consistency)
     // Randomly pick a checkout status
-    const checkoutStatus = CHECKOUT_STATUSES[Math.floor(Math.random() * CHECKOUT_STATUSES.length)];
+    const checkoutStatus =
+      CHECKOUT_STATUSES[Math.floor(Math.random() * CHECKOUT_STATUSES.length)];
 
     let orderStatus = "pending";
     let shipmentStatus = "packing";
@@ -61,20 +74,28 @@ async function main() {
     let transactionTime = null;
 
     // Random date in the last 30 days
-    const createdDate = new Date(Date.now() - Math.floor(Math.random() * 30 * 24 * 60 * 60 * 1000));
+    const createdDate = new Date(
+      Date.now() - Math.floor(Math.random() * 30 * 24 * 60 * 60 * 1000)
+    );
 
     if (checkoutStatus === "paid") {
       // If paid, order can be processed, shipped, or completed (rarely cancelled)
       // We exclude 'pending' for orders if checkout is paid to make it realistic
       const validOrderStatuses = ["processed", "shipped", "completed"];
-      orderStatus = validOrderStatuses[Math.floor(Math.random() * validOrderStatuses.length)];
-      
+      orderStatus =
+        validOrderStatuses[
+          Math.floor(Math.random() * validOrderStatuses.length)
+        ];
+
       paymentStatus = "settlement";
       paymentType = "bank_transfer";
       transactionTime = createdDate;
 
       if (orderStatus === "shipped" || orderStatus === "completed") {
-        shipmentStatus = SHIPMENT_STATUSES[Math.floor(Math.random() * SHIPMENT_STATUSES.length)];
+        shipmentStatus =
+          SHIPMENT_STATUSES[
+            Math.floor(Math.random() * SHIPMENT_STATUSES.length)
+          ];
       }
     } else if (checkoutStatus === "expired") {
       orderStatus = "cancelled";
@@ -103,11 +124,15 @@ async function main() {
     await prisma.payment.create({
       data: {
         checkout_id: checkout.id,
-        midtrans_order_id: `ORDER-${checkout.id}-${Math.floor(Math.random() * 99999)}`,
-        transaction_id: `TRX-${checkout.id}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        xendit_invoice_id: `ORDER-${checkout.id}-${Math.floor(
+          Math.random() * 99999
+        )}`,
+        transaction_id: `TRX-${checkout.id}-${Date.now()}-${Math.floor(
+          Math.random() * 1000
+        )}`,
         gross_amount: grandTotal,
         transaction_status: paymentStatus,
-        payment_type: paymentType,
+        payment_method: paymentType,
         transaction_time: transactionTime,
         created_at: createdDate,
         updated_at: createdDate,
@@ -132,24 +157,30 @@ async function main() {
 
       // G. Create Shipment (only if processed/shipped/completed)
       if (["processed", "shipped", "completed"].includes(orderStatus)) {
-         // Logic: if processed, maybe tracking number is null? let's assume tracking exists for simplicity or based on status
-         const hasTracking = orderStatus !== "processed"; // Only shipped/completed have tracking
-         
-         await prisma.shipment.create({
-           data: {
-             order_id: order.id,
-             courier_name: ["JNE", "J&T", "SiCepat", "Pos Indonesia"][Math.floor(Math.random() * 4)],
-             tracking_number: hasTracking ? `JP${Math.floor(Math.random() * 10000000000)}` : null,
-             status: shipmentStatus as any,
-             created_at: createdDate,
-             updated_at: createdDate,
-           }
-         });
+        // Logic: if processed, maybe tracking number is null? let's assume tracking exists for simplicity or based on status
+        const hasTracking = orderStatus !== "processed"; // Only shipped/completed have tracking
+
+        await prisma.shipment.create({
+          data: {
+            order_id: order.id,
+            courier_name: ["JNE", "J&T", "SiCepat", "Pos Indonesia"][
+              Math.floor(Math.random() * 4)
+            ],
+            tracking_number: hasTracking
+              ? `JP${Math.floor(Math.random() * 10000000000)}`
+              : null,
+            status: shipmentStatus as any,
+            created_at: createdDate,
+            updated_at: createdDate,
+          },
+        });
       }
     }
   }
 
-  console.log(`✅ Successfully created ${TOTAL_CHECKOUTS} checkouts with related orders, payments, and shipments.`);
+  console.log(
+    `✅ Successfully created ${TOTAL_CHECKOUTS} checkouts with related orders, payments, and shipments.`
+  );
 }
 
 main()

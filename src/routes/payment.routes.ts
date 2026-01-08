@@ -4,9 +4,9 @@ import authMiddleware from "../middleware/auth";
 
 const router: Router = express.Router();
 
-// Test routes for Midtrans
-router.get("/test-config", PaymentController.testMidtransConfig);
-router.post("/test-transaction", PaymentController.testCreateTransaction);
+// Test routes for Xendit
+router.get("/test-config", PaymentController.testXenditConfig);
+router.post("/test-invoice", PaymentController.testCreateInvoice);
 
 // Production routes
 router.post("/create", authMiddleware, PaymentController.create);
