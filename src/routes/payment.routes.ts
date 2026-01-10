@@ -8,6 +8,9 @@ const router: Router = express.Router();
 router.get("/test-config", PaymentController.testXenditConfig);
 router.post("/test-invoice", PaymentController.testCreateInvoice);
 
+// Test webhook with sample data
+router.post("/test-webhook", PaymentController.webhook);
+
 // Production routes
 router.post("/create", authMiddleware, PaymentController.create);
 router.post("/webhook", PaymentController.webhook);

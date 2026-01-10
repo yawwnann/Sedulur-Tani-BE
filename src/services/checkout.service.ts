@@ -5,7 +5,7 @@ import { calculateShippingCost } from "./shipping.service";
 class CheckoutService {
   async validateAddress(addressId: string, userId: string) {
     const address = await prisma.userAddress.findUnique({
-      where: { id: addressId }
+      where: { id: addressId },
     });
 
     if (!address) {
@@ -25,10 +25,10 @@ class CheckoutService {
       include: {
         items: {
           include: {
-            product: true
-          }
-        }
-      }
+            product: true,
+          },
+        },
+      },
     });
 
     if (!cart || cart.items.length === 0) {
@@ -70,52 +70,60 @@ class CheckoutService {
     totals: { totalPrice: number; shippingPrice: number; grandTotal: number },
     notes?: string
   ) {
-    const checkout = await prisma.checkout.create({
-      data: {
-        user_id: userId,
-        total_price: totals.totalPrice,
-        shipping_price: totals.shippingPrice,
-        grand_total: totals.grandTotal,
-        notes: notes || null,
-        status: "pending"
-      }
-    });
+    // ✅ Use transaction for checkout creation to ensure consistency
+    return await prisma.$transaction(async (tx) => {
+      // Re-validate stock within transaction for consistency
+      for (const item of cart.items) {
+        const product = await tx.product.findUnique({
+          where: { id: item.product_id },
+          select: { id: true, stock: true, name: true },
+        });
 
-    const orderPromises = cart.items.map((item: any) =>
-      prisma.order.create({
-        data: {
-          checkout_id: checkout.id,
-          user_id: userId,
-          product_id: item.product_id,
-          quantity: item.quantity,
-          price_each: item.product.price,
-          total_price: item.product.price * item.quantity,
-          status: "pending"
+        if (!product) {
+          throw new Error(`Product not found: ${item.product.name}`);
         }
-      })
-    );
 
-    await Promise.all(orderPromises);
+        if (product.stock < item.quantity) {
+          throw new Error(
+            `Insufficient stock for ${item.product.name}. Available: ${product.stock}, Requested: ${item.quantity}`
+          );
+        }
+      }
 
-    // Don't decrement stock here - will be done after successful payment
-    // const stockUpdatePromises = cart.items.map((item: any) =>
-    //   prisma.product.update({
-    //     where: { id: item.product_id },
-    //     data: {
-    //       stock: {
-    //         decrement: item.quantity
-    //       }
-    //     }
-    //   })
-    // );
-    // await Promise.all(stockUpdatePromises);
+      // Create checkout
+      const checkout = await tx.checkout.create({
+        data: {
+          user_id: userId,
+          total_price: totals.totalPrice,
+          shipping_price: totals.shippingPrice,
+          grand_total: totals.grandTotal,
+          notes: notes || null,
+          status: "pending",
+        },
+      });
 
-    // Don't clear cart yet - will be cleared after successful payment
-    // await prisma.cartItem.deleteMany({
-    //   where: { cart_id: cart.id }
-    // });
+      // Create orders
+      const orderPromises = cart.items.map((item: any) =>
+        tx.order.create({
+          data: {
+            checkout_id: checkout.id,
+            user_id: userId,
+            product_id: item.product_id,
+            quantity: item.quantity,
+            price_each: item.product.price,
+            total_price: item.product.price * item.quantity,
+            status: "pending",
+          },
+        })
+      );
 
-    return checkout;
+      await Promise.all(orderPromises);
+
+      // Don't decrement stock here - will be done after successful payment
+      // Don't clear cart yet - will be cleared after successful payment
+
+      return checkout;
+    });
   }
 
   async getCheckoutWithOrders(checkoutId: string) {
@@ -129,12 +137,12 @@ class CheckoutService {
                 id: true,
                 name: true,
                 weight: true,
-                image_url: true
-              }
-            }
-          }
-        }
-      }
+                image_url: true,
+              },
+            },
+          },
+        },
+      },
     });
   }
 
@@ -149,12 +157,12 @@ class CheckoutService {
                 id: true,
                 name: true,
                 weight: true,
-                image_url: true
-              }
-            }
-          }
-        }
-      }
+                image_url: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!checkout) {
@@ -171,10 +179,7 @@ class CheckoutService {
   async getUserAddress(userId: string) {
     const address = await prisma.userAddress.findFirst({
       where: { user_id: userId },
-      orderBy: [
-        { is_default: 'desc' },
-        { created_at: 'desc' }
-      ]
+      orderBy: [{ is_default: "desc" }, { created_at: "desc" }],
     });
 
     if (!address) {

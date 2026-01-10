@@ -150,6 +150,8 @@ class PaymentService {
     // For Xendit, signature verification is done via callback token in headers
     // This should be verified in the controller/route middleware
 
+    console.log("Processing Xendit callback:", callback);
+
     const payment = await prisma.payment.findUnique({
       where: { xendit_invoice_id: callback.id },
       include: {
@@ -162,9 +164,23 @@ class PaymentService {
     });
 
     if (!payment) {
-      throw new Error("Payment not found");
+      throw new Error("Payment not found for this Xendit invoice ID");
     }
 
+    // ✅ IDEMPOTENCY CHECK - Prevent duplicate callback processing
+    const existingCallback = await prisma.paymentNotification.findFirst({
+      where: {
+        payment_id: payment.id,
+        raw_body: JSON.stringify(callback),
+      },
+    });
+
+    if (existingCallback) {
+      console.log("Duplicate callback detected, skipping processing");
+      return; // Callback already processed
+    }
+
+    // Save notification callback
     await prisma.paymentNotification.create({
       data: {
         payment_id: payment.id,
@@ -194,62 +210,91 @@ class PaymentService {
       orderStatus = "pending";
     }
 
-    await prisma.payment.update({
-      where: { id: payment.id },
-      data: {
-        transaction_status: invoiceStatus.toLowerCase(),
-        payment_method: callback.payment_method,
-        transaction_time: callback.paid_at ? new Date(callback.paid_at) : null,
-      },
-    });
+    // ✅ USE TRANSACTION for atomic operations
+    try {
+      await prisma.$transaction(async (tx) => {
+        // Update payment status
+        await tx.payment.update({
+          where: { id: payment.id },
+          data: {
+            transaction_status: invoiceStatus.toLowerCase(),
+            payment_method: callback.payment_method,
+            transaction_time: callback.paid_at
+              ? new Date(callback.paid_at)
+              : null,
+          },
+        });
 
-    await prisma.checkout.update({
-      where: { id: payment.checkout_id },
-      data: {
-        status: checkoutStatus,
-      },
-    });
+        // Update checkout status
+        await tx.checkout.update({
+          where: { id: payment.checkout_id },
+          data: {
+            status: checkoutStatus,
+          },
+        });
 
-    await prisma.order.updateMany({
-      where: { checkout_id: payment.checkout_id },
-      data: {
-        status: orderStatus,
-      },
-    });
+        // Update orders status
+        await tx.order.updateMany({
+          where: { checkout_id: payment.checkout_id },
+          data: {
+            status: orderStatus,
+          },
+        });
 
-    // Clear cart after successful payment
-    if (checkoutStatus === "paid") {
-      const checkout = await prisma.checkout.findUnique({
-        where: { id: payment.checkout_id },
-        select: { user_id: true },
+        // Clear cart and update stock ONLY if payment successful
+        if (checkoutStatus === "paid") {
+          const checkout = await tx.checkout.findUnique({
+            where: { id: payment.checkout_id },
+            select: { user_id: true },
+          });
+
+          if (checkout) {
+            const cart = await tx.cart.findUnique({
+              where: { user_id: checkout.user_id },
+            });
+
+            if (cart) {
+              await tx.cartItem.deleteMany({
+                where: { cart_id: cart.id },
+              });
+            }
+          }
+
+          // ✅ UPDATE STOCK with ATOMIC DECREMENT
+          for (const order of payment.checkout.orders) {
+            // Validate stock available before decrement
+            const product = await tx.product.findUnique({
+              where: { id: order.product_id },
+              select: { id: true, stock: true, name: true },
+            });
+
+            if (!product) {
+              throw new Error(`Product not found: ${order.product_id}`);
+            }
+
+            if (product.stock < order.quantity) {
+              throw new Error(
+                `Insufficient stock for ${product.name}. Available: ${product.stock}, Required: ${order.quantity}`
+              );
+            }
+
+            // Atomic decrement - prevents race condition
+            await tx.product.update({
+              where: { id: order.product_id },
+              data: {
+                stock: {
+                  decrement: order.quantity,
+                },
+              },
+            });
+          }
+        }
       });
 
-      if (checkout) {
-        const cart = await prisma.cart.findUnique({
-          where: { user_id: checkout.user_id },
-        });
-
-        if (cart) {
-          await prisma.cartItem.deleteMany({
-            where: { cart_id: cart.id },
-          });
-        }
-      }
-
-      for (const order of payment.checkout.orders) {
-        const product = await prisma.product.findUnique({
-          where: { id: order.product_id },
-        });
-
-        if (product) {
-          await prisma.product.update({
-            where: { id: order.product_id },
-            data: {
-              stock: product.stock - order.quantity,
-            },
-          });
-        }
-      }
+      console.log("Payment callback processed successfully");
+    } catch (error) {
+      console.error("Error processing payment callback:", error);
+      throw error;
     }
   }
 
