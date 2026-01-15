@@ -1,10 +1,12 @@
-import axios from "axios";
 import crypto from "crypto";
 import ShippingCache from "../../models/ShippingCache";
+import {
+  getCities,
+  findCityByName,
+  calculateShippingCost,
+  City,
+} from "../data/shipping-rates";
 
-const KOMERCE_API_KEY = process.env.KOMERCE_API_KEY || "";
-const KOMERCE_BASE_URL =
-  process.env.KOMERCE_BASE_URL || "https://api.komerce.id/v1";
 const CACHE_DURATION_DAYS = 30; // Cache selama 30 hari
 
 interface CostParams {
@@ -17,11 +19,8 @@ interface CostParams {
 interface ShippingCost {
   service: string;
   description: string;
-  cost: Array<{
-    value: number;
-    etd: string;
-    note: string;
-  }>;
+  cost: number;
+  etd: string;
 }
 
 export class KomerceShippingService {
@@ -35,25 +34,24 @@ export class KomerceShippingService {
   }
 
   /**
-   * Get domestic destinations dari Komerce API
+   * Get domestic destinations (static data)
    */
   async getDomesticDestinations() {
     try {
-      const response = await axios.get(
-        `${KOMERCE_BASE_URL}/shipping/domestic-destination`,
-        {
-          headers: {
-            "api-key": KOMERCE_API_KEY,
-          },
-        }
-      );
+      const cities = getCities();
 
-      return response.data;
+      return {
+        success: true,
+        data: cities.map((city) => ({
+          id: city.id,
+          code: city.id,
+          name: city.name,
+          city_name: city.name,
+          province: city.province,
+        })),
+      };
     } catch (error: any) {
-      console.error(
-        "Error fetching destinations:",
-        error.response?.data || error.message
-      );
+      console.error("Error fetching destinations:", error.message);
       throw new Error("Failed to fetch destinations");
     }
   }
@@ -90,28 +88,11 @@ export class KomerceShippingService {
       };
     }
 
-    console.log("❌ Cache MISS - Calling Komerce API");
+    console.log("❌ Cache MISS - Calculating shipping cost");
 
-    // Call Komerce API
+    // Calculate shipping cost from static data
     try {
-      const response = await axios.post(
-        `${KOMERCE_BASE_URL}/shipping/domestic-cost`,
-        {
-          origin,
-          destination,
-          weight,
-          courier,
-        },
-        {
-          headers: {
-            "api-key": KOMERCE_API_KEY,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      // Transform Komerce response to match our format
-      const costs = this.transformKomerceResponse(response.data);
+      const costs = calculateShippingCost(destination, weight, courier);
 
       // Save to cache
       const expiresAt = new Date();
@@ -140,37 +121,9 @@ export class KomerceShippingService {
         expiresAt,
       };
     } catch (error: any) {
-      console.error(
-        "Error calling Komerce API:",
-        error.response?.data || error.message
-      );
-      throw new Error(
-        error.response?.data?.message || "Failed to get shipping cost"
-      );
+      console.error("Error calculating shipping cost:", error.message);
+      throw new Error("Failed to get shipping cost");
     }
-  }
-
-  /**
-   * Transform Komerce API response to standard format
-   */
-  private transformKomerceResponse(data: any): ShippingCost[] {
-    // Adjust this based on actual Komerce API response structure
-    if (data.data && Array.isArray(data.data)) {
-      return data.data.map((item: any) => ({
-        service: item.service || item.service_name || "Standard",
-        description: item.description || item.service_description || "",
-        cost: [
-          {
-            value: item.cost || item.price || 0,
-            etd: item.etd || item.estimation || "2-3",
-            note: item.note || "",
-          },
-        ],
-      }));
-    }
-
-    // Fallback if structure is different
-    return [];
   }
 
   /**
