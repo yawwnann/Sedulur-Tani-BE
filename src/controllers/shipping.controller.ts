@@ -7,19 +7,134 @@ export class ShippingController {
    */
   async getDestinations(req: Request, res: Response) {
     try {
-      const destinations =
-        await komerceShippingService.getDomesticDestinations();
+      const result = await komerceShippingService.getDomesticDestinations();
 
       res.status(200).json({
         success: true,
         message: "Destinations retrieved successfully",
-        data: destinations,
+        data: result.data, // Extract the data array directly
       });
     } catch (error: any) {
       console.error("Error in getDestinations:", error);
       res.status(500).json({
         success: false,
         message: error.message || "Failed to get destinations",
+      });
+    }
+  }
+
+  /**
+   * Get list of provinces
+   */
+  async getProvinces(req: Request, res: Response) {
+    try {
+      const result = await komerceShippingService.getDomesticDestinations();
+      const cities = result.data;
+
+      // Extract unique provinces
+      const provincesMap = new Map();
+      cities.forEach((city: any, index: number) => {
+        if (city.province && !provincesMap.has(city.province)) {
+          provincesMap.set(city.province, {
+            id: `prov-${index}`,
+            province_id: `prov-${index}`,
+            name: city.province,
+            province: city.province,
+          });
+        }
+      });
+
+      res.status(200).json({
+        success: true,
+        message: "Provinces retrieved successfully",
+        data: Array.from(provincesMap.values()),
+      });
+    } catch (error: any) {
+      console.error("Error in getProvinces:", error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Failed to get provinces",
+      });
+    }
+  }
+
+  /**
+   * Get list of regencies/cities by province
+   */
+  async getRegencies(req: Request, res: Response) {
+    try {
+      const { province_id } = req.query;
+      const result = await komerceShippingService.getDomesticDestinations();
+      let cities = result.data;
+
+      // If province_id provided, filter by province
+      if (province_id) {
+        // First get all provinces to find the name
+        const provincesMap = new Map();
+        cities.forEach((city: any, index: number) => {
+          if (city.province && !provincesMap.has(city.province)) {
+            provincesMap.set(city.province, {
+              id: `prov-${index}`,
+              name: city.province,
+            });
+          }
+        });
+
+        // Find province name from id
+        const province = Array.from(provincesMap.values()).find(
+          (p: any) => p.id === province_id
+        );
+
+        if (province) {
+          cities = cities.filter(
+            (city: any) => city.province === province.name
+          );
+        }
+      }
+
+      // Format as regencies
+      const regencies = cities.map((city: any) => ({
+        id: city.id,
+        city_id: city.id,
+        province_id: province_id || "",
+        province: city.province,
+        type: city.type || "Kota",
+        name: city.name,
+        city_name: city.name,
+        postal_code: "",
+      }));
+
+      res.status(200).json({
+        success: true,
+        message: "Regencies retrieved successfully",
+        data: regencies,
+      });
+    } catch (error: any) {
+      console.error("Error in getRegencies:", error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Failed to get regencies",
+      });
+    }
+  }
+
+  /**
+   * Get list of districts (kecamatan) - returns empty as not needed
+   */
+  async getDistricts(req: Request, res: Response) {
+    try {
+      // Return empty array as we don't have district data
+      // and it's not needed for shipping calculation
+      res.status(200).json({
+        success: true,
+        message: "Districts not available",
+        data: [],
+      });
+    } catch (error: any) {
+      console.error("Error in getDistricts:", error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Failed to get districts",
       });
     }
   }

@@ -13,6 +13,29 @@ const router = Router();
 router.get("/destinations", shippingController.getDestinations);
 
 /**
+ * @route   GET /api/shipping/provinces
+ * @desc    Get list of provinces
+ * @access  Public
+ */
+router.get("/provinces", shippingController.getProvinces);
+
+/**
+ * @route   GET /api/shipping/regencies
+ * @desc    Get list of regencies/cities by province
+ * @access  Public
+ * @query   province_id (optional)
+ */
+router.get("/regencies", shippingController.getRegencies);
+
+/**
+ * @route   GET /api/shipping/districts
+ * @desc    Get list of districts (kecamatan) - returns empty
+ * @access  Public
+ * @query   regency_id (optional)
+ */
+router.get("/districts", shippingController.getDistricts);
+
+/**
  * @route   POST /api/shipping/cost
  * @desc    Calculate shipping cost with caching
  * @access  Public

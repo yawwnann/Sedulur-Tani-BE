@@ -48,6 +48,7 @@ export class KomerceShippingService {
           name: city.name,
           city_name: city.name,
           province: city.province,
+          type: city.type || "Kota",
         })),
       };
     } catch (error: any) {
