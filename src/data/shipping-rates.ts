@@ -25,87 +25,570 @@ export interface CourierRates {
 // Daftar kota tujuan diperluas
 export const CITIES: City[] = [
   // Jawa Timur
-  { id: "surabaya", name: "Surabaya", province: "Jawa Timur" },
-  { id: "malang", name: "Malang", province: "Jawa Timur" },
-  { id: "sidoarjo", name: "Sidoarjo", province: "Jawa Timur" },
-  { id: "gresik", name: "Gresik", province: "Jawa Timur" },
-  { id: "mojokerto", name: "Mojokerto", province: "Jawa Timur" },
-  { id: "jember", name: "Jember", province: "Jawa Timur" },
-  { id: "kediri", name: "Kediri", province: "Jawa Timur" },
-  { id: "probolinggo", name: "Probolinggo", province: "Jawa Timur" },
-  { id: "pasuruan", name: "Pasuruan", province: "Jawa Timur" },
-  { id: "madiun", name: "Madiun", province: "Jawa Timur" },
-  { id: "banyuwangi", name: "Banyuwangi", province: "Jawa Timur" },
-  { id: "tuban", name: "Tuban", province: "Jawa Timur" },
+  { id: "surabaya", name: "Surabaya", province: "Jawa Timur", type: "Kota" },
+  { id: "malang", name: "Malang", province: "Jawa Timur", type: "Kota" },
+  {
+    id: "kab_malang",
+    name: "Kabupaten Malang",
+    province: "Jawa Timur",
+    type: "Kabupaten",
+  },
+  {
+    id: "sidoarjo",
+    name: "Sidoarjo",
+    province: "Jawa Timur",
+    type: "Kabupaten",
+  },
+  { id: "gresik", name: "Gresik", province: "Jawa Timur", type: "Kabupaten" },
+  {
+    id: "mojokerto",
+    name: "Mojokerto",
+    province: "Jawa Timur",
+    type: "Kota",
+  },
+  {
+    id: "kab_mojokerto",
+    name: "Kabupaten Mojokerto",
+    province: "Jawa Timur",
+    type: "Kabupaten",
+  },
+  { id: "jember", name: "Jember", province: "Jawa Timur", type: "Kabupaten" },
+  { id: "kediri", name: "Kediri", province: "Jawa Timur", type: "Kota" },
+  {
+    id: "kab_kediri",
+    name: "Kabupaten Kediri",
+    province: "Jawa Timur",
+    type: "Kabupaten",
+  },
+  {
+    id: "probolinggo",
+    name: "Probolinggo",
+    province: "Jawa Timur",
+    type: "Kota",
+  },
+  {
+    id: "kab_probolinggo",
+    name: "Kabupaten Probolinggo",
+    province: "Jawa Timur",
+    type: "Kabupaten",
+  },
+  {
+    id: "pasuruan",
+    name: "Pasuruan",
+    province: "Jawa Timur",
+    type: "Kota",
+  },
+  {
+    id: "kab_pasuruan",
+    name: "Kabupaten Pasuruan",
+    province: "Jawa Timur",
+    type: "Kabupaten",
+  },
+  { id: "madiun", name: "Madiun", province: "Jawa Timur", type: "Kota" },
+  {
+    id: "kab_madiun",
+    name: "Kabupaten Madiun",
+    province: "Jawa Timur",
+    type: "Kabupaten",
+  },
+  {
+    id: "banyuwangi",
+    name: "Banyuwangi",
+    province: "Jawa Timur",
+    type: "Kabupaten",
+  },
+  { id: "tuban", name: "Tuban", province: "Jawa Timur", type: "Kabupaten" },
+  { id: "blitar", name: "Blitar", province: "Jawa Timur", type: "Kota" },
+  {
+    id: "kab_blitar",
+    name: "Kabupaten Blitar",
+    province: "Jawa Timur",
+    type: "Kabupaten",
+  },
+  { id: "batu", name: "Batu", province: "Jawa Timur", type: "Kota" },
+  {
+    id: "lamongan",
+    name: "Lamongan",
+    province: "Jawa Timur",
+    type: "Kabupaten",
+  },
+  {
+    id: "bojonegoro",
+    name: "Bojonegoro",
+    province: "Jawa Timur",
+    type: "Kabupaten",
+  },
 
-  // Jawa Tengah & DIY
-  { id: "semarang", name: "Semarang", province: "Jawa Tengah" },
-  { id: "solo", name: "Solo", province: "Jawa Tengah" },
-  { id: "yogyakarta", name: "Yogyakarta", province: "DI Yogyakarta" },
-  { id: "magelang", name: "Magelang", province: "Jawa Tengah" },
-  { id: "purwokerto", name: "Purwokerto", province: "Jawa Tengah" },
-  { id: "tegal", name: "Tegal", province: "Jawa Tengah" },
-  { id: "cilacap", name: "Cilacap", province: "Jawa Tengah" },
-  { id: "kudus", name: "Kudus", province: "Jawa Tengah" },
+  // Jawa Tengah
+  {
+    id: "semarang",
+    name: "Semarang",
+    province: "Jawa Tengah",
+    type: "Kota",
+  },
+  {
+    id: "kab_semarang",
+    name: "Kabupaten Semarang",
+    province: "Jawa Tengah",
+    type: "Kabupaten",
+  },
+  { id: "solo", name: "Surakarta", province: "Jawa Tengah", type: "Kota" },
+  {
+    id: "sukoharjo",
+    name: "Sukoharjo",
+    province: "Jawa Tengah",
+    type: "Kabupaten",
+  },
+  {
+    id: "magelang",
+    name: "Magelang",
+    province: "Jawa Tengah",
+    type: "Kota",
+  },
+  {
+    id: "kab_magelang",
+    name: "Kabupaten Magelang",
+    province: "Jawa Tengah",
+    type: "Kabupaten",
+  },
+  {
+    id: "purwokerto",
+    name: "Purwokerto",
+    province: "Jawa Tengah",
+    type: "Kabupaten",
+  },
+  { id: "tegal", name: "Tegal", province: "Jawa Tengah", type: "Kota" },
+  {
+    id: "kab_tegal",
+    name: "Kabupaten Tegal",
+    province: "Jawa Tengah",
+    type: "Kabupaten",
+  },
+  {
+    id: "cilacap",
+    name: "Cilacap",
+    province: "Jawa Tengah",
+    type: "Kabupaten",
+  },
+  { id: "kudus", name: "Kudus", province: "Jawa Tengah", type: "Kabupaten" },
+  {
+    id: "pekalongan",
+    name: "Pekalongan",
+    province: "Jawa Tengah",
+    type: "Kota",
+  },
+  {
+    id: "salatiga",
+    name: "Salatiga",
+    province: "Jawa Tengah",
+    type: "Kota",
+  },
 
-  // Jawa Barat & Banten
-  { id: "bandung", name: "Bandung", province: "Jawa Barat" },
-  { id: "bogor", name: "Bogor", province: "Jawa Barat" },
-  { id: "depok", name: "Depok", province: "Jawa Barat" },
-  { id: "bekasi", name: "Bekasi", province: "Jawa Barat" },
-  { id: "cirebon", name: "Cirebon", province: "Jawa Barat" },
-  { id: "sukabumi", name: "Sukabumi", province: "Jawa Barat" },
-  { id: "tasikmalaya", name: "Tasikmalaya", province: "Jawa Barat" },
-  { id: "tangerang", name: "Tangerang", province: "Banten" },
-  { id: "serang", name: "Serang", province: "Banten" },
-  { id: "cilegon", name: "Cilegon", province: "Banten" },
+  // DI Yogyakarta
+  {
+    id: "yogyakarta",
+    name: "Yogyakarta",
+    province: "DI Yogyakarta",
+    type: "Kota",
+  },
+  {
+    id: "sleman",
+    name: "Sleman",
+    province: "DI Yogyakarta",
+    type: "Kabupaten",
+  },
+  {
+    id: "bantul",
+    name: "Bantul",
+    province: "DI Yogyakarta",
+    type: "Kabupaten",
+  },
+  {
+    id: "kulon_progo",
+    name: "Kulon Progo",
+    province: "DI Yogyakarta",
+    type: "Kabupaten",
+  },
+  {
+    id: "gunung_kidul",
+    name: "Gunung Kidul",
+    province: "DI Yogyakarta",
+    type: "Kabupaten",
+  },
+
+  // Jawa Barat
+  { id: "bandung", name: "Bandung", province: "Jawa Barat", type: "Kota" },
+  {
+    id: "kab_bandung",
+    name: "Kabupaten Bandung",
+    province: "Jawa Barat",
+    type: "Kabupaten",
+  },
+  {
+    id: "bandung_barat",
+    name: "Bandung Barat",
+    province: "Jawa Barat",
+    type: "Kabupaten",
+  },
+  { id: "bogor", name: "Bogor", province: "Jawa Barat", type: "Kota" },
+  {
+    id: "kab_bogor",
+    name: "Kabupaten Bogor",
+    province: "Jawa Barat",
+    type: "Kabupaten",
+  },
+  { id: "depok", name: "Depok", province: "Jawa Barat", type: "Kota" },
+  { id: "bekasi", name: "Bekasi", province: "Jawa Barat", type: "Kota" },
+  {
+    id: "kab_bekasi",
+    name: "Kabupaten Bekasi",
+    province: "Jawa Barat",
+    type: "Kabupaten",
+  },
+  { id: "cirebon", name: "Cirebon", province: "Jawa Barat", type: "Kota" },
+  {
+    id: "kab_cirebon",
+    name: "Kabupaten Cirebon",
+    province: "Jawa Barat",
+    type: "Kabupaten",
+  },
+  { id: "sukabumi", name: "Sukabumi", province: "Jawa Barat", type: "Kota" },
+  {
+    id: "kab_sukabumi",
+    name: "Kabupaten Sukabumi",
+    province: "Jawa Barat",
+    type: "Kabupaten",
+  },
+  {
+    id: "tasikmalaya",
+    name: "Tasikmalaya",
+    province: "Jawa Barat",
+    type: "Kota",
+  },
+  {
+    id: "kab_tasikmalaya",
+    name: "Kabupaten Tasikmalaya",
+    province: "Jawa Barat",
+    type: "Kabupaten",
+  },
+
+  // Banten
+  { id: "tangerang", name: "Tangerang", province: "Banten", type: "Kota" },
+  {
+    id: "tangerang_selatan",
+    name: "Tangerang Selatan",
+    province: "Banten",
+    type: "Kota",
+  },
+  {
+    id: "kab_tangerang",
+    name: "Kabupaten Tangerang",
+    province: "Banten",
+    type: "Kabupaten",
+  },
+  { id: "serang", name: "Serang", province: "Banten", type: "Kota" },
+  {
+    id: "kab_serang",
+    name: "Kabupaten Serang",
+    province: "Banten",
+    type: "Kabupaten",
+  },
+  { id: "cilegon", name: "Cilegon", province: "Banten", type: "Kota" },
+  {
+    id: "pandeglang",
+    name: "Pandeglang",
+    province: "Banten",
+    type: "Kabupaten",
+  },
+  {
+    id: "lebak",
+    name: "Lebak",
+    province: "Banten",
+    type: "Kabupaten",
+  },
 
   // DKI Jakarta
-  { id: "jakarta_pusat", name: "Jakarta Pusat", province: "DKI Jakarta" },
-  { id: "jakarta_selatan", name: "Jakarta Selatan", province: "DKI Jakarta" },
-  { id: "jakarta_barat", name: "Jakarta Barat", province: "DKI Jakarta" },
-  { id: "jakarta_timur", name: "Jakarta Timur", province: "DKI Jakarta" },
-  { id: "jakarta_utara", name: "Jakarta Utara", province: "DKI Jakarta" },
+  {
+    id: "jakarta_pusat",
+    name: "Jakarta Pusat",
+    province: "DKI Jakarta",
+    type: "Kota",
+  },
+  {
+    id: "jakarta_selatan",
+    name: "Jakarta Selatan",
+    province: "DKI Jakarta",
+    type: "Kota",
+  },
+  {
+    id: "jakarta_barat",
+    name: "Jakarta Barat",
+    province: "DKI Jakarta",
+    type: "Kota",
+  },
+  {
+    id: "jakarta_timur",
+    name: "Jakarta Timur",
+    province: "DKI Jakarta",
+    type: "Kota",
+  },
+  {
+    id: "jakarta_utara",
+    name: "Jakarta Utara",
+    province: "DKI Jakarta",
+    type: "Kota",
+  },
+  {
+    id: "kepulauan_seribu",
+    name: "Kepulauan Seribu",
+    province: "DKI Jakarta",
+    type: "Kabupaten",
+  },
 
-  // Bali & Nusa Tenggara
-  { id: "denpasar", name: "Denpasar", province: "Bali" },
-  { id: "gianyar", name: "Gianyar", province: "Bali" },
-  { id: "mataram", name: "Mataram", province: "Nusa Tenggara Barat" },
-  { id: "kupang", name: "Kupang", province: "Nusa Tenggara Timur" },
+  // Bali
+  { id: "denpasar", name: "Denpasar", province: "Bali", type: "Kota" },
+  { id: "badung", name: "Badung", province: "Bali", type: "Kabupaten" },
+  { id: "gianyar", name: "Gianyar", province: "Bali", type: "Kabupaten" },
+  { id: "tabanan", name: "Tabanan", province: "Bali", type: "Kabupaten" },
+  { id: "buleleng", name: "Buleleng", province: "Bali", type: "Kabupaten" },
+  { id: "karangasem", name: "Karangasem", province: "Bali", type: "Kabupaten" },
 
-  // Kalimantan
-  { id: "balikpapan", name: "Balikpapan", province: "Kalimantan Timur" },
-  { id: "samarinda", name: "Samarinda", province: "Kalimantan Timur" },
-  { id: "banjarmasin", name: "Banjarmasin", province: "Kalimantan Selatan" },
-  { id: "pontianak", name: "Pontianak", province: "Kalimantan Barat" },
-  { id: "palangkaraya", name: "Palangkaraya", province: "Kalimantan Tengah" },
-  { id: "tarakan", name: "Tarakan", province: "Kalimantan Utara" },
+  // Kalimantan Timur
+  {
+    id: "balikpapan",
+    name: "Balikpapan",
+    province: "Kalimantan Timur",
+    type: "Kota",
+  },
+  {
+    id: "samarinda",
+    name: "Samarinda",
+    province: "Kalimantan Timur",
+    type: "Kota",
+  },
+  {
+    id: "bontang",
+    name: "Bontang",
+    province: "Kalimantan Timur",
+    type: "Kota",
+  },
 
-  // Sulawesi
-  { id: "makassar", name: "Makassar", province: "Sulawesi Selatan" },
-  { id: "manado", name: "Manado", province: "Sulawesi Utara" },
-  { id: "palu", name: "Palu", province: "Sulawesi Tengah" },
-  { id: "kendari", name: "Kendari", province: "Sulawesi Tenggara" },
-  { id: "gorontalo", name: "Gorontalo", province: "Gorontalo" },
+  // Kalimantan Selatan
+  {
+    id: "banjarmasin",
+    name: "Banjarmasin",
+    province: "Kalimantan Selatan",
+    type: "Kota",
+  },
+  {
+    id: "banjarbaru",
+    name: "Banjarbaru",
+    province: "Kalimantan Selatan",
+    type: "Kota",
+  },
 
-  // Sumatera
-  { id: "medan", name: "Medan", province: "Sumatera Utara" },
-  { id: "palembang", name: "Palembang", province: "Sumatera Selatan" },
-  { id: "pekanbaru", name: "Pekanbaru", province: "Riau" },
-  { id: "lampung", name: "Bandar Lampung", province: "Lampung" },
-  { id: "padang", name: "Padang", province: "Sumatera Barat" },
-  { id: "jambi", name: "Jambi", province: "Jambi" },
-  { id: "bengkulu", name: "Bengkulu", province: "Bengkulu" },
-  { id: "aceh", name: "Banda Aceh", province: "Aceh" },
-  { id: "batam", name: "Batam", province: "Kepulauan Riau" },
-  { id: "pangkalpinang", name: "Pangkal Pinang", province: "Bangka Belitung" },
+  // Kalimantan Barat
+  {
+    id: "pontianak",
+    name: "Pontianak",
+    province: "Kalimantan Barat",
+    type: "Kota",
+  },
+  {
+    id: "singkawang",
+    name: "Singkawang",
+    province: "Kalimantan Barat",
+    type: "Kota",
+  },
 
-  // Maluku & Papua
-  { id: "ambon", name: "Ambon", province: "Maluku" },
-  { id: "ternate", name: "Ternate", province: "Maluku Utara" },
-  { id: "jayapura", name: "Jayapura", province: "Papua" },
-  { id: "sorong", name: "Sorong", province: "Papua Barat" },
-  { id: "merauke", name: "Merauke", province: "Papua Selatan" },
+  // Kalimantan Tengah
+  {
+    id: "palangkaraya",
+    name: "Palangka Raya",
+    province: "Kalimantan Tengah",
+    type: "Kota",
+  },
+
+  // Kalimantan Utara
+  {
+    id: "tarakan",
+    name: "Tarakan",
+    province: "Kalimantan Utara",
+    type: "Kota",
+  },
+
+  // Sulawesi Selatan
+  {
+    id: "makassar",
+    name: "Makassar",
+    province: "Sulawesi Selatan",
+    type: "Kota",
+  },
+  {
+    id: "pare_pare",
+    name: "Pare-Pare",
+    province: "Sulawesi Selatan",
+    type: "Kota",
+  },
+  {
+    id: "palopo",
+    name: "Palopo",
+    province: "Sulawesi Selatan",
+    type: "Kota",
+  },
+
+  // Sulawesi Utara
+  {
+    id: "manado",
+    name: "Manado",
+    province: "Sulawesi Utara",
+    type: "Kota",
+  },
+  {
+    id: "bitung",
+    name: "Bitung",
+    province: "Sulawesi Utara",
+    type: "Kota",
+  },
+  {
+    id: "tomohon",
+    name: "Tomohon",
+    province: "Sulawesi Utara",
+    type: "Kota",
+  },
+
+  // Sulawesi Tengah
+  { id: "palu", name: "Palu", province: "Sulawesi Tengah", type: "Kota" },
+
+  // Sulawesi Tenggara
+  {
+    id: "kendari",
+    name: "Kendari",
+    province: "Sulawesi Tenggara",
+    type: "Kota",
+  },
+  {
+    id: "bau_bau",
+    name: "Bau-Bau",
+    province: "Sulawesi Tenggara",
+    type: "Kota",
+  },
+
+  // Gorontalo
+  {
+    id: "gorontalo",
+    name: "Gorontalo",
+    province: "Gorontalo",
+    type: "Kota",
+  },
+
+  // Sumatera Utara
+  {
+    id: "medan",
+    name: "Medan",
+    province: "Sumatera Utara",
+    type: "Kota",
+  },
+  {
+    id: "binjai",
+    name: "Binjai",
+    province: "Sumatera Utara",
+    type: "Kota",
+  },
+  {
+    id: "pematangsiantar",
+    name: "Pematangsiantar",
+    province: "Sumatera Utara",
+    type: "Kota",
+  },
+
+  // Sumatera Selatan
+  {
+    id: "palembang",
+    name: "Palembang",
+    province: "Sumatera Selatan",
+    type: "Kota",
+  },
+  {
+    id: "prabumulih",
+    name: "Prabumulih",
+    province: "Sumatera Selatan",
+    type: "Kota",
+  },
+
+  // Riau
+  { id: "pekanbaru", name: "Pekanbaru", province: "Riau", type: "Kota" },
+  { id: "dumai", name: "Dumai", province: "Riau", type: "Kota" },
+
+  // Kepulauan Riau
+  {
+    id: "batam",
+    name: "Batam",
+    province: "Kepulauan Riau",
+    type: "Kota",
+  },
+  {
+    id: "tanjung_pinang",
+    name: "Tanjung Pinang",
+    province: "Kepulauan Riau",
+    type: "Kota",
+  },
+
+  // Lampung
+  {
+    id: "lampung",
+    name: "Bandar Lampung",
+    province: "Lampung",
+    type: "Kota",
+  },
+  { id: "metro", name: "Metro", province: "Lampung", type: "Kota" },
+
+  // Sumatera Barat
+  {
+    id: "padang",
+    name: "Padang",
+    province: "Sumatera Barat",
+    type: "Kota",
+  },
+  {
+    id: "bukittinggi",
+    name: "Bukittinggi",
+    province: "Sumatera Barat",
+    type: "Kota",
+  },
+  {
+    id: "padang_panjang",
+    name: "Padang Panjang",
+    province: "Sumatera Barat",
+    type: "Kota",
+  },
+
+  // Jambi
+  { id: "jambi", name: "Jambi", province: "Jambi", type: "Kota" },
+  { id: "sungai_penuh", name: "Sungai Penuh", province: "Jambi", type: "Kota" },
+
+  // Bengkulu
+  { id: "bengkulu", name: "Bengkulu", province: "Bengkulu", type: "Kota" },
+
+  // Aceh
+  {
+    id: "banda_aceh",
+    name: "Banda Aceh",
+    province: "Aceh",
+    type: "Kota",
+  },
+  {
+    id: "lhokseumawe",
+    name: "Lhokseumawe",
+    province: "Aceh",
+    type: "Kota",
+  },
+  {
+    id: "langsa",
+    name: "Langsa",
+    province: "Aceh",
+    type: "Kota",
+  },
 ];
 
 // Base rates per kg dari Surabaya (Estimasi Logistik Reguler)

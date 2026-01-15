@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import komerceShippingService from "../services/rajaongkir.service";
+import locationService from "../services/location.service";
 
 export class ShippingController {
   /**
@@ -28,26 +29,17 @@ export class ShippingController {
    */
   async getProvinces(req: Request, res: Response) {
     try {
-      const result = await komerceShippingService.getDomesticDestinations();
-      const cities = result.data;
-
-      // Extract unique provinces
-      const provincesMap = new Map();
-      cities.forEach((city: any, index: number) => {
-        if (city.province && !provincesMap.has(city.province)) {
-          provincesMap.set(city.province, {
-            id: `prov-${index}`,
-            province_id: `prov-${index}`,
-            name: city.province,
-            province: city.province,
-          });
-        }
-      });
+      const provinces = locationService.getProvinces();
 
       res.status(200).json({
         success: true,
         message: "Provinces retrieved successfully",
-        data: Array.from(provincesMap.values()),
+        data: provinces.map((p) => ({
+          id: p.id,
+          province_id: p.id,
+          name: p.name,
+          province: p.name,
+        })),
       });
     } catch (error: any) {
       console.error("Error in getProvinces:", error);
@@ -64,50 +56,27 @@ export class ShippingController {
   async getRegencies(req: Request, res: Response) {
     try {
       const { province_id } = req.query;
-      const result = await komerceShippingService.getDomesticDestinations();
-      let cities = result.data;
-
-      // If province_id provided, filter by province
-      if (province_id) {
-        // First get all provinces to find the name
-        const provincesMap = new Map();
-        cities.forEach((city: any, index: number) => {
-          if (city.province && !provincesMap.has(city.province)) {
-            provincesMap.set(city.province, {
-              id: `prov-${index}`,
-              name: city.province,
-            });
-          }
-        });
-
-        // Find province name from id
-        const province = Array.from(provincesMap.values()).find(
-          (p: any) => p.id === province_id
-        );
-
-        if (province) {
-          cities = cities.filter(
-            (city: any) => city.province === province.name
-          );
-        }
-      }
+      const regencies = locationService.getRegencies(
+        province_id as string | undefined
+      );
 
       // Format as regencies
-      const regencies = cities.map((city: any) => ({
-        id: city.id,
-        city_id: city.id,
-        province_id: province_id || "",
-        province: city.province,
-        type: city.type || "Kota",
-        name: city.name,
-        city_name: city.name,
+      const formattedRegencies = regencies.map((regency) => ({
+        id: regency.id,
+        city_id: regency.id,
+        province_id: regency.province_id,
+        province:
+          locationService.getProvinceById(regency.province_id)?.name || "",
+        type: regency.type === "KOTA" ? "Kota" : "Kabupaten",
+        name: regency.name,
+        city_name: regency.name,
         postal_code: "",
       }));
 
       res.status(200).json({
         success: true,
         message: "Regencies retrieved successfully",
-        data: regencies,
+        data: formattedRegencies,
       });
     } catch (error: any) {
       console.error("Error in getRegencies:", error);
@@ -119,16 +88,27 @@ export class ShippingController {
   }
 
   /**
-   * Get list of districts (kecamatan) - returns empty as not needed
+   * Get list of districts (kecamatan)
    */
   async getDistricts(req: Request, res: Response) {
     try {
-      // Return empty array as we don't have district data
-      // and it's not needed for shipping calculation
+      const { regency_id } = req.query;
+      const districts = locationService.getDistricts(
+        regency_id as string | undefined
+      );
+
+      const formattedDistricts = districts.map((district) => ({
+        id: district.id,
+        district_id: district.id,
+        regency_id: district.regency_id,
+        name: district.name,
+        district_name: district.name,
+      }));
+
       res.status(200).json({
         success: true,
-        message: "Districts not available",
-        data: [],
+        message: "Districts retrieved successfully",
+        data: formattedDistricts,
       });
     } catch (error: any) {
       console.error("Error in getDistricts:", error);

@@ -29,7 +29,7 @@ router.get("/regencies", shippingController.getRegencies);
 
 /**
  * @route   GET /api/shipping/districts
- * @desc    Get list of districts (kecamatan) - returns empty
+ * @desc    Get list of districts (kecamatan)
  * @access  Public
  * @query   regency_id (optional)
  */
