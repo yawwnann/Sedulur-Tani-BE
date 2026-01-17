@@ -330,10 +330,14 @@ class OrderService {
       throw new Error("Forbidden: Only sellers can update order status");
     }
 
-    // Validate status transition for the first order (all orders in checkout have same status)
-    this.validateStatusTransition(ordersToUpdate[0].status, newStatus);
+    const currentStatus = ordersToUpdate[0].status;
 
-    // Update all orders in the checkout
+    // Only validate status transition if status is actually changing
+    if (currentStatus !== newStatus) {
+      this.validateStatusTransition(currentStatus, newStatus);
+    }
+
+    // Always update order status (even if same, to ensure consistency)
     await prisma.order.updateMany({
       where: {
         checkout_id: checkoutId,
@@ -341,7 +345,7 @@ class OrderService {
       data: { status: newStatus },
     });
 
-    // If changing to shipped status, create shipment records for all orders
+    // Handle shipment records for shipped status
     if (newStatus === "shipped" && courierName) {
       for (const order of ordersToUpdate) {
         // Check if shipment already exists for this order
@@ -349,7 +353,19 @@ class OrderService {
           where: { order_id: order.id },
         });
 
-        if (!existingShipment) {
+        if (existingShipment) {
+          // Update existing shipment with new courier/tracking info
+          await prisma.shipment.update({
+            where: { id: existingShipment.id },
+            data: {
+              courier_name: courierName,
+              tracking_number:
+                trackingNumber || existingShipment.tracking_number,
+              updated_at: new Date(),
+            },
+          });
+        } else {
+          // Create new shipment record
           await prisma.shipment.create({
             data: {
               order_id: order.id,

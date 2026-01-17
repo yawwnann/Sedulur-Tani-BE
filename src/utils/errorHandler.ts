@@ -1,6 +1,10 @@
 import { Response } from "express";
 
-export const handleError = (res: Response, error: any, customMessage?: string) => {
+export const handleError = (
+  res: Response,
+  error: any,
+  customMessage?: string,
+) => {
   console.error("Error:", error);
 
   const message = error.message || customMessage || "Internal server error";
@@ -9,26 +13,32 @@ export const handleError = (res: Response, error: any, customMessage?: string) =
   if (message.includes("not found")) {
     return res.status(404).json({
       success: false,
-      message
+      message,
     });
   }
 
   if (message.includes("Forbidden") || message.includes("only")) {
     return res.status(403).json({
       success: false,
-      message
+      message,
     });
   }
 
-  if (message.includes("required") || message.includes("Insufficient") || message.includes("empty")) {
+  if (
+    message.includes("required") ||
+    message.includes("Insufficient") ||
+    message.includes("empty")
+  ) {
     return res.status(400).json({
       success: false,
-      message
+      message,
     });
   }
 
+  // Return actual error message for debugging
   return res.status(500).json({
     success: false,
-    message: "Internal server error"
+    message,
+    error: process.env.NODE_ENV === "development" ? error.stack : undefined,
   });
 };
