@@ -11,7 +11,8 @@ const app: Application = express();
 // CORS Configuration
 const allowedOrigins = [
   "http://localhost:3000",
-  "http://localhost:3001",
+  "https://sedulur-tani-fe.vercel.app",
+  "https://sedulurtani.com",
   "http://127.0.0.1:3000",
   "http://192.168.1.8:3000",
   process.env.FRONTEND_URL || "http://localhost:3000",
