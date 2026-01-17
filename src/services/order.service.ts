@@ -34,10 +34,10 @@ class OrderService {
                 address_line: true,
                 city: true,
                 province: true,
-                postal_code: true
-              }
-            }
-          }
+                postal_code: true,
+              },
+            },
+          },
         },
         orders: {
           include: {
@@ -53,10 +53,10 @@ class OrderService {
                   select: {
                     id: true,
                     name: true,
-                    email: true
-                  }
-                }
-              }
+                    email: true,
+                  },
+                },
+              },
             },
             shipments: {
               select: {
@@ -66,23 +66,23 @@ class OrderService {
                 tracking_number: true,
                 status: true,
                 created_at: true,
-                updated_at: true
+                updated_at: true,
               },
               orderBy: {
-                created_at: 'desc'
+                created_at: "desc",
               },
-              take: 1
-            }
-          }
-        }
+              take: 1,
+            },
+          },
+        },
       },
       orderBy: {
-        created_at: 'desc'
-      }
+        created_at: "desc",
+      },
     });
 
     // Transform data to group orders by checkout
-    const result = checkouts.map(checkout => ({
+    const result = checkouts.map((checkout) => ({
       id: checkout.id,
       checkout_id: checkout.id,
       user_id: checkout.user_id,
@@ -97,9 +97,9 @@ class OrderService {
         id: checkout.id,
         status: checkout.status,
         grand_total: checkout.grand_total,
-        shipping_price: checkout.shipping_price
+        shipping_price: checkout.shipping_price,
       },
-      items: checkout.orders.map(order => ({
+      items: checkout.orders.map((order) => ({
         id: order.id,
         product_id: order.product_id,
         quantity: order.quantity,
@@ -107,25 +107,29 @@ class OrderService {
         total_price: order.total_price,
         status: order.status,
         product: order.product,
-        shipments: order.shipments
-      }))
+        shipments: order.shipments,
+      })),
     }));
 
     return result;
   }
 
-  async getOrderById(orderId: string, userId: string, role: UserRole): Promise<any> {
+  async getOrderById(
+    orderId: string,
+    userId: string,
+    role: UserRole,
+  ): Promise<any> {
     // Try to find by checkout_id first (new format)
     let checkout = await prisma.checkout.findUnique({
       where: { id: orderId },
-      select: { id: true, user_id: true }
+      select: { id: true, user_id: true },
     });
 
     // If not found as checkout, try to find as order (old format compatibility)
     if (!checkout) {
       const singleOrder = await prisma.order.findUnique({
         where: { id: orderId },
-        select: { checkout_id: true, user_id: true }
+        select: { checkout_id: true, user_id: true },
       });
 
       if (!singleOrder) {
@@ -140,7 +144,7 @@ class OrderService {
       // Use the checkout_id from order
       checkout = await prisma.checkout.findUnique({
         where: { id: singleOrder.checkout_id },
-        select: { id: true, user_id: true }
+        select: { id: true, user_id: true },
       });
     } else {
       // Buyer hanya bisa akses pesanan mereka sendiri
@@ -173,10 +177,10 @@ class OrderService {
                 city: true,
                 province: true,
                 postal_code: true,
-                is_default: true
-              }
-            }
-          }
+                is_default: true,
+              },
+            },
+          },
         },
         orders: {
           include: {
@@ -193,10 +197,10 @@ class OrderService {
                   select: {
                     id: true,
                     name: true,
-                    email: true
-                  }
-                }
-              }
+                    email: true,
+                  },
+                },
+              },
             },
             shipments: {
               select: {
@@ -206,15 +210,15 @@ class OrderService {
                 tracking_number: true,
                 status: true,
                 created_at: true,
-                updated_at: true
+                updated_at: true,
               },
               orderBy: {
-                created_at: 'desc'
-              }
-            }
-          }
-        }
-      }
+                created_at: "desc",
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!fullCheckout) {
@@ -238,9 +242,9 @@ class OrderService {
         status: fullCheckout.status,
         grand_total: fullCheckout.grand_total,
         shipping_price: fullCheckout.shipping_price,
-        notes: fullCheckout.notes
+        notes: fullCheckout.notes,
       },
-      items: fullCheckout.orders.map(order => ({
+      items: fullCheckout.orders.map((order) => ({
         id: order.id,
         product_id: order.product_id,
         quantity: order.quantity,
@@ -248,25 +252,28 @@ class OrderService {
         total_price: order.total_price,
         status: order.status,
         product: order.product,
-        shipments: order.shipments
-      }))
+        shipments: order.shipments,
+      })),
     };
   }
 
-  validateStatusTransition(currentStatus: OrderStatus, newStatus: OrderStatus): void {
+  validateStatusTransition(
+    currentStatus: OrderStatus,
+    newStatus: OrderStatus,
+  ): void {
     const validTransitions: Record<OrderStatus, OrderStatus[]> = {
       pending: ["processed", "cancelled"],
       processed: ["shipped", "cancelled"],
       shipped: ["completed", "cancelled"],
       completed: [],
-      cancelled: []
+      cancelled: [],
     };
 
     const allowedStatuses = validTransitions[currentStatus];
 
     if (!allowedStatuses.includes(newStatus)) {
       throw new Error(
-        `Invalid status transition from ${currentStatus} to ${newStatus}. Allowed: ${allowedStatuses.join(", ")}`
+        `Invalid status transition from ${currentStatus} to ${newStatus}. Allowed: ${allowedStatuses.join(", ")}`,
       );
     }
   }
@@ -277,14 +284,14 @@ class OrderService {
     userId: string,
     userRole: UserRole,
     courierName?: string,
-    trackingNumber?: string
+    trackingNumber?: string,
   ): Promise<OrderResponse> {
     // Try to find as checkout_id first (new format - grouped orders)
     let checkout = await prisma.checkout.findUnique({
       where: { id: orderId },
       include: {
-        orders: true
-      }
+        orders: true,
+      },
     });
 
     let isCheckoutId = !!checkout;
@@ -301,8 +308,8 @@ class OrderService {
         where: { id: orderId },
         include: {
           product: true,
-          checkout: true
-        }
+          checkout: true,
+        },
       });
 
       if (!order) {
@@ -317,9 +324,9 @@ class OrderService {
       throw new Error("No orders found to update");
     }
 
-    // Seller (yang juga admin) bisa update semua order
+    // Seller bisa update semua order (seller = admin di sistem ini)
     // Buyer tidak bisa update order status
-    if (userRole !== "seller") {
+    if (userRole !== UserRole.seller) {
       throw new Error("Forbidden: Only sellers can update order status");
     }
 
@@ -328,10 +335,10 @@ class OrderService {
 
     // Update all orders in the checkout
     await prisma.order.updateMany({
-      where: { 
-        checkout_id: checkoutId 
+      where: {
+        checkout_id: checkoutId,
       },
-      data: { status: newStatus }
+      data: { status: newStatus },
     });
 
     // If changing to shipped status, create shipment records for all orders
@@ -339,7 +346,7 @@ class OrderService {
       for (const order of ordersToUpdate) {
         // Check if shipment already exists for this order
         const existingShipment = await prisma.shipment.findFirst({
-          where: { order_id: order.id }
+          where: { order_id: order.id },
         });
 
         if (!existingShipment) {
@@ -348,8 +355,8 @@ class OrderService {
               order_id: order.id,
               courier_name: courierName,
               tracking_number: trackingNumber || null,
-              status: "shipping"
-            }
+              status: "shipping",
+            },
           });
         }
       }
@@ -376,10 +383,10 @@ class OrderService {
                 address_line: true,
                 city: true,
                 province: true,
-                postal_code: true
-              }
-            }
-          }
+                postal_code: true,
+              },
+            },
+          },
         },
         product: {
           select: {
@@ -388,16 +395,16 @@ class OrderService {
             description: true,
             price: true,
             stock: true,
-            image_url: true
-          }
+            image_url: true,
+          },
         },
         checkout: {
           select: {
             id: true,
             status: true,
             grand_total: true,
-            shipping_price: true
-          }
+            shipping_price: true,
+          },
         },
         shipments: {
           select: {
@@ -407,14 +414,14 @@ class OrderService {
             tracking_number: true,
             status: true,
             created_at: true,
-            updated_at: true
+            updated_at: true,
           },
           orderBy: {
-            created_at: 'desc'
+            created_at: "desc",
           },
-          take: 1
-        }
-      }
+          take: 1,
+        },
+      },
     });
 
     if (!updatedOrder) {
@@ -423,21 +430,24 @@ class OrderService {
 
     // Update checkout status based on order statuses
     const checkoutOrders = await prisma.order.findMany({
-      where: { checkout_id: checkoutId }
+      where: { checkout_id: checkoutId },
     });
 
-    const allCompleted = checkoutOrders.every(o => o.status === "completed");
-    const anyCancelled = checkoutOrders.some(o => o.status === "cancelled");
+    const allCompleted = checkoutOrders.every((o) => o.status === "completed");
+    const anyCancelled = checkoutOrders.some((o) => o.status === "cancelled");
 
     if (allCompleted) {
       await prisma.checkout.update({
         where: { id: checkoutId },
-        data: { status: "paid" }
+        data: { status: "paid" },
       });
-    } else if (anyCancelled && checkoutOrders.every(o => o.status === "cancelled")) {
+    } else if (
+      anyCancelled &&
+      checkoutOrders.every((o) => o.status === "cancelled")
+    ) {
       await prisma.checkout.update({
         where: { id: checkoutId },
-        data: { status: "expired" }
+        data: { status: "expired" },
       });
     }
 

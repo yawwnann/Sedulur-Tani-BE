@@ -7,6 +7,11 @@ const router: Router = express.Router();
 
 router.get("/", authMiddleware, OrderController.getAll);
 router.get("/:id", authMiddleware, OrderController.getById);
-router.put("/:id/status", authMiddleware, requireSeller, OrderController.updateStatus);
+router.put(
+  "/:id/status",
+  authMiddleware,
+  requireSeller,
+  OrderController.updateStatus,
+);
 
 export default router;

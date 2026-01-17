@@ -9,21 +9,25 @@ interface AuthRequest extends Request {
   };
 }
 
-export const requireSeller = (req: AuthRequest, res: Response, next: NextFunction): Response | void => {
+export const requireSeller = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+): Response | void => {
   try {
     const user = (req as any).user;
 
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: "Unauthorized: Authentication required"
+        message: "Unauthorized: Authentication required",
       });
     }
 
     if (user.role !== "seller") {
       return res.status(403).json({
         success: false,
-        message: "Forbidden: Only sellers can perform this action"
+        message: "Forbidden: Only sellers can perform this action",
       });
     }
 
@@ -32,26 +36,30 @@ export const requireSeller = (req: AuthRequest, res: Response, next: NextFunctio
     console.error("Role check error:", error);
     return res.status(500).json({
       success: false,
-      message: "Internal server error"
+      message: "Internal server error",
     });
   }
 };
 
-export const requireBuyer = (req: AuthRequest, res: Response, next: NextFunction): Response | void => {
+export const requireBuyer = (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction,
+): Response | void => {
   try {
     const user = (req as any).user;
 
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: "Unauthorized: Authentication required"
+        message: "Unauthorized: Authentication required",
       });
     }
 
     if (user.role !== "buyer") {
       return res.status(403).json({
         success: false,
-        message: "Forbidden: Only buyers can perform this action"
+        message: "Forbidden: Only buyers can perform this action",
       });
     }
 
@@ -60,7 +68,7 @@ export const requireBuyer = (req: AuthRequest, res: Response, next: NextFunction
     console.error("Role check error:", error);
     return res.status(500).json({
       success: false,
-      message: "Internal server error"
+      message: "Internal server error",
     });
   }
 };
